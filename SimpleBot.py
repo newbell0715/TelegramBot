@@ -54,7 +54,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         f'안녕하세요 {user_name}님! 저는 Gemini AI 봇입니다! 🤖\n'
         f'무엇이든 물어보세요! 저는 24/7 돌아가고 있어요! ⚡\n'
-        f'🎉 현재 버전: v1.1 (Railway 자동 배포 테스트)\n\n'
+        f'🎉 현재 버전: v1.2 (Railway 충돌 해결)\n\n'
         f'🌍 번역 & TTS 기능:\n'
         f'- /trs [언어] [텍스트] - 간단 번역\n'
         f'- /trl [언어] [텍스트] - 상세 번역\n'
