@@ -31,8 +31,8 @@ for handler in logging.root.handlers:
     handler.setFormatter(MSKFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
 # --- API 키 및 토큰 ---
-GEMINI_API_KEY = "AIzaSyCmH1flv0HSRp8xYa1Y8oL7xnpyyQVuIw8" # 본인의 Gemini API 키
-BOT_TOKEN = "8064422632:AAFkFqQDA_35OCa5-BFxeHPA9_hil4cY8Rg" # 본인의 텔레그램 봇 토큰
+GEMINI_API_KEY = "AIzaSyCmH1flv0HSRp8xYa1Y8oL7xnpyyQVuIw8"
+BOT_TOKEN = "8064422632:AAFkFqQDA_35OCa5-BFxeHPA9_hil4cY8Rg"
 
 # --- Gemini AI 설정 ---
 genai.configure(api_key=GEMINI_API_KEY)
@@ -82,7 +82,7 @@ def get_user(chat_id):
     user_id = str(chat_id)
     if user_id not in users:
         users[user_id] = {
-            'plan': 'Pro',  # 새 사용자는 Pro 플랜으로 시작
+            'plan': 'Pro',
             'subscribed_daily': False,
             'quest_state': {'current_quest': None, 'stage': 0},
             'stats': {
@@ -94,7 +94,6 @@ def get_user(chat_id):
             }
         }
         save_user_data(users)
-    # 사용자가 활동할 때마다 마지막 활동일 업데이트
     users[user_id]['stats']['last_active_date'] = datetime.now(MSK).isoformat()
     save_user_data(users)
     return users[user_id]
@@ -109,11 +108,10 @@ async def call_gemini(prompt: str) -> str:
         return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
 
 # --- 핵심 기능: 명령어 핸들러 ---
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     chat_id = user.id
-    get_user(chat_id) # 사용자 데이터 생성 또는 로드
+    get_user(chat_id)
     
     await update.message.reply_text(
         f"🎉 안녕하세요, {user.first_name}님!\n"
@@ -185,7 +183,7 @@ async def quest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     quest_state = user['quest_state']
 
     if quest_state['current_quest'] is None:
-        quest_id = 'q1' # 첫 퀘스트
+        quest_id = 'q1'
         users = load_user_data()
         users[str(chat_id)]['quest_state'] = {'current_quest': quest_id, 'stage': 1}
         save_user_data(users)
@@ -206,8 +204,8 @@ async def quest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         quest = QUEST_DATA[quest_id]
         
         if stage > len(quest['stages']):
-             await update.message.reply_text("이미 모든 퀘스트를 완료하셨습니다! 다음 업데이트를 기대해주세요.")
-             return
+            await update.message.reply_text("이미 모든 퀘스트를 완료하셨습니다! 다음 업데이트를 기대해주세요.")
+            return
 
         stage_data = quest['stages'][stage]
         await update.message.reply_text(
@@ -239,18 +237,14 @@ async def action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     quest = QUEST_DATA[quest_id]
     stage_data = quest['stages'][stage]
 
-    # 키워드 기반으로 성공 여부 판단 (간단한 방식)
     if any(keyword in user_text.lower() for keyword in stage_data['keywords']):
-        # 성공
         next_stage = stage + 1
         if next_stage > len(quest['stages']):
-            # 퀘스트 완료
             user['quest_state'] = {'current_quest': None, 'stage': 0}
             user['stats']['quests_completed'] += 1
             save_user_data(users)
             await update.message.reply_text(f"🎉 **퀘스트 완료: {quest['title']}** 🎉\n\n축하합니다! 실전 러시아어 경험치가 1 상승했습니다. `/quest`로 다음 퀘스트에 도전하세요!")
         else:
-            # 다음 단계로
             user['quest_state']['stage'] = next_stage
             save_user_data(users)
             
@@ -263,7 +257,6 @@ async def action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 f"➡️ **당신의 행동:**\n{next_stage_data['action_prompt']}"
             )
     else:
-        # 실패
         await update.message.reply_text(f"음... 조금 다른 표현이 필요할 것 같아요. 다시 시도해볼까요?\n\n**힌트:** {stage_data['action_prompt']}")
 
 async def write_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -276,8 +269,8 @@ async def write_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     user = get_user(chat_id)
     if user['plan'] == 'Free' and user['stats']['sentences_corrected'] >= 5:
-         await update.message.reply_text("오늘의 무료 작문 교정 횟수를 모두 사용하셨습니다. Pro 플랜으로 업그레이드하시면 무제한으로 사용 가능합니다!")
-         return
+        await update.message.reply_text("오늘의 무료 작문 교정 횟수를 모두 사용하셨습니다. Pro 플랜으로 업그레이드하시면 무제한으로 사용 가능합니다!")
+        return
 
     processing_message = await update.message.reply_text("✍️ AI가 문장을 교정하고 있습니다. 잠시만 기다려주세요...")
 
@@ -305,7 +298,6 @@ async def write_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await processing_message.delete()
     await update.message.reply_text(corrected_text)
 
-    # 통계 업데이트
     users = load_user_data()
     users[str(chat_id)]['stats']['sentences_corrected'] += 1
     save_user_data(users)
@@ -316,11 +308,6 @@ async def my_progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     stats = user_data['stats']
 
     start_date = datetime.fromisoformat(stats['start_date'])
-    today = datetime.now(MSK)
-    
-    # 주간 데이터 계산
-    last_week = today - timedelta(days=7)
-    # 실제 구현에서는 주간 활동을 별도로 기록해야 하지만, 여기서는 전체 통계를 보여줌
     
     progress_report = f"""
     📊 **{update.effective_user.first_name}님의 성장 일기** 📊
@@ -370,7 +357,6 @@ async def send_daily_learning(bot: Bot):
                 message = f"**☀️ 오늘의 러시아어 학습 (모스크바 기준 {datetime.now(MSK).strftime('%m월 %d일')})**\n\n{learning_content}"
                 await bot.send_message(chat_id=user_id, text=message)
                 
-                # 통계 업데이트
                 user_data['stats']['daily_words_received'] += 1
                 logger.info(f"Sent daily learning to {user_id}")
             except Exception as e:
@@ -378,28 +364,14 @@ async def send_daily_learning(bot: Bot):
     
     save_user_data(users)
 
-
-async def post_init(application: Application) -> None:
-    """애플리케이션 초기화 후 스케줄러를 시작합니다."""
-    scheduler = AsyncIOScheduler(timezone=MSK)
-    scheduler.add_job(send_daily_learning, 'cron', hour=6, minute=0, args=[application.bot])
-    scheduler.start()
-    # 애플리케이션 컨텍스트에 스케줄러 저장 (선택 사항)
-    application.bot_data["scheduler"] = scheduler
-    logger.info("APScheduler가 성공적으로 시작되었습니다.")
-
-
 # --- 봇 실행 ---
 async def main() -> None:
-    """봇을 설정하고 비동기적으로 실행합니다."""
     if not BOT_TOKEN or not GEMINI_API_KEY:
         logger.error("텔레그램 봇 토큰 또는 Gemini API 키가 설정되지 않았습니다!")
         return
 
-    # 애플리케이션 생성
-    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    application = Application.builder().token(BOT_TOKEN).build()
     
-    # 명령어 핸들러 등록
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("subscribe_daily", subscribe_daily_command))
@@ -409,26 +381,23 @@ async def main() -> None:
     application.add_handler(CommandHandler("write", write_command))
     application.add_handler(CommandHandler("my_progress", my_progress_command))
     
-    # 일반 메시지 처리 (향후 기능 확장용)
-    # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    scheduler = AsyncIOScheduler(timezone=MSK)
+    scheduler.add_job(send_daily_learning, 'cron', hour=6, minute=0, args=[application.bot])
     
     logger.info("🤖 튜터 봇 '루샤'가 활동을 시작합니다...")
     
     try:
-        # 스케줄러와 봇을 동시에 실행
-        scheduler = application.bot_data["scheduler"] # post_init에서 저장한 스케줄러
         scheduler.start()
         await application.initialize()
         await application.start()
         await application.updater.start_polling()
         
-        # 봇이 중지될 때까지 계속 실행
         while True:
-            await asyncio.sleep(3600) # 1시간마다 체크 (또는 다른 시간)
+            await asyncio.sleep(3600)
 
     except (KeyboardInterrupt, SystemExit):
         logger.info("봇과 스케줄러를 종료합니다.")
-        scheduler.shutdown() # 스케줄러 종료
+        scheduler.shutdown()
         await application.updater.stop()
         await application.stop()
         await application.shutdown()
