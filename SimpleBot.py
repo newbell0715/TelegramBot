@@ -5,10 +5,11 @@ import io
 from datetime import datetime, timedelta
 import pytz
 from gtts import gTTS
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 import google.generativeai as genai
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
 
 # --- 기본 설정 ---
 
@@ -343,8 +344,7 @@ async def my_progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     """
     await update.message.reply_text(progress_report)
 
-async def send_daily_learning(context: ContextTypes.DEFAULT_TYPE):
-    bot = context.bot
+async def send_daily_learning(bot: Bot):
     users = load_user_data()
     
     prompt = """
@@ -379,18 +379,25 @@ async def send_daily_learning(context: ContextTypes.DEFAULT_TYPE):
     save_user_data(users)
 
 
+async def post_init(application: Application) -> None:
+    """애플리케이션 초기화 후 스케줄러를 시작합니다."""
+    scheduler = AsyncIOScheduler(timezone=MSK)
+    scheduler.add_job(send_daily_learning, 'cron', hour=6, minute=0, args=[application.bot])
+    scheduler.start()
+    # 애플리케이션 컨텍스트에 스케줄러 저장 (선택 사항)
+    application.bot_data["scheduler"] = scheduler
+    logger.info("APScheduler가 성공적으로 시작되었습니다.")
+
+
 # --- 봇 실행 ---
-def main() -> None:
+async def main() -> None:
+    """봇을 설정하고 비동기적으로 실행합니다."""
     if not BOT_TOKEN or not GEMINI_API_KEY:
         logger.error("텔레그램 봇 토큰 또는 Gemini API 키가 설정되지 않았습니다!")
         return
 
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # 스케줄러 설정
-    scheduler = AsyncIOScheduler(timezone=MSK)
-    scheduler.add_job(send_daily_learning, 'cron', hour=6, minute=0, args=[application])
-    scheduler.start()
+    # 애플리케이션 생성
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     
     # 명령어 핸들러 등록
     application.add_handler(CommandHandler("start", start_command))
@@ -406,7 +413,25 @@ def main() -> None:
     # application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     logger.info("🤖 튜터 봇 '루샤'가 활동을 시작합니다...")
-    application.run_polling()
+    
+    try:
+        # 스케줄러와 봇을 동시에 실행
+        scheduler = application.bot_data["scheduler"] # post_init에서 저장한 스케줄러
+        scheduler.start()
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        
+        # 봇이 중지될 때까지 계속 실행
+        while True:
+            await asyncio.sleep(3600) # 1시간마다 체크 (또는 다른 시간)
+
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("봇과 스케줄러를 종료합니다.")
+        scheduler.shutdown() # 스케줄러 종료
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
 
 if __name__ == '__main__':
-    main() 
+    asyncio.run(main()) 
