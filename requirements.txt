@@ -1,5 +1,5 @@
-python-telegram-bot[ext]
+python-telegram-bot
 google-generativeai
-requests
-gtts
-pytz 
+pytz
+gTTS
+APScheduler 
