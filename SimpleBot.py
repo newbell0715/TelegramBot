@@ -938,7 +938,7 @@ async def send_daily_learning(bot: Bot):
     
     # 러시아어 학습 데이터베이스 로드
     try:
-        with open('russian_learning_database.json', 'r', encoding='utf-8') as f:
+        with open('russian_korean_vocab_2000.json', 'r', encoding='utf-8') as f:
             database = json.load(f)
     except FileNotFoundError:
         logger.error("러시아어 학습 데이터베이스 파일이 없습니다!")
@@ -946,9 +946,17 @@ async def send_daily_learning(bot: Bot):
     
     import random
     
-    # 30개 단어와 20개 회화 랜덤 선택
+    # 30개 단어 랜덤 선택
     vocabulary = random.sample(database['vocabulary'], min(30, len(database['vocabulary'])))
-    conversations = random.sample(database['conversations'], min(20, len(database['conversations'])))
+    
+    # 회화 문장은 기존 데이터베이스에서 로드
+    try:
+        with open('russian_learning_database.json', 'r', encoding='utf-8') as f:
+            old_database = json.load(f)
+        conversations = random.sample(old_database['conversations'], min(20, len(old_database['conversations'])))
+    except FileNotFoundError:
+        # 기존 파일이 없으면 단어로 대체
+        conversations = random.sample(database['vocabulary'], min(20, len(database['vocabulary'])))
     
     # 단어 메시지 생성
     words_message = "📚 **오늘의 러시아어 단어 (30개)**\n\n"
