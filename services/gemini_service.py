@@ -1,13 +1,15 @@
 import logging
 import asyncio
 import google.generativeai as genai
-from config.settings import GEMINI_API_KEY
+
+# 강제 API 키 설정
+API_KEY = "AIzaSyCmH1flv0HSRp8xYa1Y8oL7xnpyyQVuIw8"
+genai.configure(api_key=API_KEY)
 
 logger = logging.getLogger(__name__)
 
 # --- Gemini AI 설정 ---
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# model = genai.GenerativeModel('gemini-1.5-flash') # This line is removed as per the new_code
 
 # 기본 번역 사전 (API 실패 시 사용)
 BASIC_TRANSLATIONS = {
@@ -39,6 +41,8 @@ def get_basic_translation(text: str) -> str:
 def _sync_call_gemini(prompt: str) -> str:
     """동기적으로 Gemini AI를 호출하는 함수"""
     try:
+        # model = genai.GenerativeModel('gemini-2.5-pro') # This line is removed as per the new_code
+        model = genai.GenerativeModel('gemini-2.5-pro') # This line is added as per the new_code
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
