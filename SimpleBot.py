@@ -36,7 +36,54 @@ BOT_TOKEN = "8064422632:AAFkFqQDA_35OCa5-BFxeHPA9_hil4cY8Rg"
 
 # --- Gemini AI 설정 ---
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-pro-latest')
+
+# 모델 상태 관리 파일
+MODEL_STATUS_FILE = 'model_status.json'
+
+# 모델 설정
+MODEL_CONFIG = {
+    'primary': {
+        'name': 'gemini-2.5-pro-latest',
+        'display_name': 'Gemini 2.5 Pro'
+    },
+    'fallback': {
+        'name': 'gemini-1.5-flash',
+        'display_name': 'Gemini 1.5 Flash'
+    }
+}
+
+# 모델 상태 로드/저장
+def load_model_status():
+    if os.path.exists(MODEL_STATUS_FILE):
+        try:
+            with open(MODEL_STATUS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {
+        'current_model': 'primary',
+        'quota_exceeded_time': None,
+        'last_primary_attempt': None,
+        'failure_count': 0
+    }
+
+def save_model_status(status):
+    try:
+        with open(MODEL_STATUS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(status, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        logger.error(f"모델 상태 저장 오류: {e}")
+
+# 현재 모델 상태
+model_status = load_model_status()
+
+# 모델 인스턴스 생성
+def get_model(model_type='primary'):
+    model_name = MODEL_CONFIG[model_type]['name']
+    return genai.GenerativeModel(model_name)
+
+# 기본 모델 설정
+model = get_model(model_status['current_model'])
 
 # --- 데이터 파일 및 상수 ---
 USER_DATA_FILE = 'user_data.json'
@@ -100,12 +147,127 @@ def get_user(chat_id):
 
 # --- AI 기능 헬퍼 ---
 async def call_gemini(prompt: str) -> str:
+    global model_status, model
+    
+    # 할당량 리셋 시간 체크 (GMT-8 기준 밤 12시)
+    now = datetime.now(pytz.timezone('America/Los_Angeles'))
+    
+    # 주기적으로 primary 모델 복구 시도 (4시간마다)
+    if model_status['current_model'] == 'fallback':
+        last_attempt = model_status.get('last_primary_attempt')
+        if last_attempt:
+            last_attempt_time = datetime.fromisoformat(last_attempt)
+            if (now - last_attempt_time).total_seconds() > 4 * 3600:  # 4시간 후
+                logger.info("4시간 경과 - Primary 모델 복구 시도")
+                model_status['last_primary_attempt'] = now.isoformat()
+                model_status['current_model'] = 'primary'
+                model = get_model('primary')
+                save_model_status(model_status)
+    
     try:
-        response = model.generate_content(prompt)
+        # 현재 모델로 API 호출
+        response = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: model.generate_content(prompt)
+        )
+        
+        # 성공 시 failure_count 리셋
+        if model_status['failure_count'] > 0:
+            model_status['failure_count'] = 0
+            save_model_status(model_status)
+        
+        current_model_name = MODEL_CONFIG[model_status['current_model']]['display_name']
+        logger.info(f"✅ {current_model_name} 사용 성공")
+        
         return response.text
+        
     except Exception as e:
-        logger.error(f"Gemini API 오류: {e}")
-        return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
+        error_str = str(e).lower()
+        
+        # 할당량 초과 감지
+        if any(keyword in error_str for keyword in ['quota', '429', 'rate limit', 'resource_exhausted']):
+            logger.warning(f"❌ 할당량 초과 감지: {e}")
+            
+            # Primary 모델에서 에러 발생 시 Fallback으로 전환
+            if model_status['current_model'] == 'primary':
+                logger.info("🔄 Fallback 모델로 전환")
+                model_status['current_model'] = 'fallback'
+                model_status['quota_exceeded_time'] = now.isoformat()
+                model_status['failure_count'] = 0
+                model = get_model('fallback')
+                save_model_status(model_status)
+                
+                # Fallback 모델로 재시도
+                try:
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: model.generate_content(prompt)
+                    )
+                    logger.info("✅ Fallback 모델 사용 성공")
+                    return response.text
+                except Exception as fallback_error:
+                    logger.error(f"❌ Fallback 모델도 실패: {fallback_error}")
+                    return "죄송합니다. 현재 AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. 😅"
+            
+            # Fallback 모델에서도 할당량 초과 시
+            else:
+                return "죄송합니다. 현재 AI 서비스 할당량이 모두 소진되었습니다. 내일 다시 시도해주세요. 😅"
+        
+        # 기타 에러
+        else:
+            model_status['failure_count'] += 1
+            save_model_status(model_status)
+            
+            logger.error(f"❌ Gemini API 오류 (시도 {model_status['failure_count']}): {e}")
+            
+            # 연속 실패 시 폴백 모델 시도
+            if model_status['failure_count'] >= 3 and model_status['current_model'] == 'primary':
+                logger.info("🔄 연속 실패로 인한 Fallback 모델 전환")
+                model_status['current_model'] = 'fallback'
+                model_status['failure_count'] = 0
+                model = get_model('fallback')
+                save_model_status(model_status)
+                
+                # Fallback 모델로 재시도
+                try:
+                    response = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: model.generate_content(prompt)
+                    )
+                    logger.info("✅ Fallback 모델 사용 성공")
+                    return response.text
+                except Exception as fallback_error:
+                    logger.error(f"❌ Fallback 모델도 실패: {fallback_error}")
+            
+            # 기본 번역 사전 활용 (번역 요청인 경우)
+            if any(keyword in prompt.lower() for keyword in ['번역', 'translate', 'перевод']):
+                return get_fallback_translation(prompt)
+            
+            return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
+
+def get_fallback_translation(prompt: str) -> str:
+    """기본 번역 사전을 활용한 폴백 번역"""
+    basic_translations = {
+        'привет': '안녕하세요',
+        'спасибо': '감사합니다',
+        'пожалуйста': '천만에요',
+        'извините': '죄송합니다',
+        'да': '네',
+        'нет': '아니요',
+        'хорошо': '좋아요',
+        'до свидания': '안녕히 가세요',
+        'как дела': '어떻게 지내세요',
+        'меня зовут': '제 이름은',
+        'я не понимаю': '이해하지 못하겠습니다',
+        'помогите': '도와주세요',
+        'где': '어디에',
+        'что': '무엇',
+        'кто': '누구'
+    }
+    
+    prompt_lower = prompt.lower()
+    for russian, korean in basic_translations.items():
+        if russian in prompt_lower:
+            return f"기본 번역: {russian} → {korean}\n\n⚠️ 현재 AI 서비스에 일시적인 문제가 있어 기본 번역만 제공됩니다."
+    
+    return "죄송합니다. 현재 AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. 😅"
 
 async def convert_text_to_speech(text: str, lang: str = "auto") -> bytes:
     """무료 Google TTS로 텍스트를 음성으로 변환 (한국어, 러시아어 지원)"""
@@ -732,31 +894,94 @@ async def translate_listen_command(update: Update, context: ContextTypes.DEFAULT
         logger.error(f"번역+음성 오류: {e}")
         await update.message.reply_text("번역+음성 변환 중 오류가 발생했습니다. 😅")
 
+async def model_status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """현재 사용 중인 AI 모델 상태 확인"""
+    user = update.effective_user
+    logger.info(f"사용자 {user.first_name} - 모델 상태 확인")
+    
+    global model_status
+    
+    current_model = model_status['current_model']
+    model_name = MODEL_CONFIG[current_model]['display_name']
+    
+    # 상태 메시지 생성
+    status_message = f"🤖 **현재 AI 모델 상태**\n\n"
+    status_message += f"📍 **현재 사용 중**: {model_name}\n"
+    
+    if current_model == 'primary':
+        status_message += "✅ 최고 성능 모델 사용 중\n"
+    else:
+        status_message += "⚠️ 폴백 모델 사용 중\n"
+        
+        # 할당량 초과 시간 표시
+        if model_status.get('quota_exceeded_time'):
+            exceeded_time = datetime.fromisoformat(model_status['quota_exceeded_time'])
+            status_message += f"⏰ 할당량 초과 시간: {exceeded_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        
+        # 다음 복구 시도 시간
+        if model_status.get('last_primary_attempt'):
+            last_attempt = datetime.fromisoformat(model_status['last_primary_attempt'])
+            next_attempt = last_attempt + timedelta(hours=4)
+            status_message += f"🔄 다음 복구 시도: {next_attempt.strftime('%Y-%m-%d %H:%M:%S')}\n"
+    
+    status_message += f"\n📊 **실패 횟수**: {model_status.get('failure_count', 0)}\n"
+    
+    # 모델 설정 정보
+    status_message += f"\n🔧 **모델 설정**:\n"
+    status_message += f"• Primary: {MODEL_CONFIG['primary']['display_name']}\n"
+    status_message += f"• Fallback: {MODEL_CONFIG['fallback']['display_name']}\n"
+    
+    await update.message.reply_text(status_message)
+
 async def send_daily_learning(bot: Bot):
     users = load_user_data()
     
-    prompt = """
-    러시아어 초급자를 위한 '오늘의 학습' 콘텐츠를 생성해줘. 아래 형식에 맞춰서:
-
-    **단어 (3개):**
-    1. [러시아어 단어] [한글 발음] - [뜻]
-    2. [러시아어 단어] [한글 발음] - [뜻]
-    3. [러시아어 단어] [한글 발음] - [뜻]
-
-    **회화 (2개):**
-    1. [러시아어 문장] - [뜻]
-       [한글 발음]
-    2. [러시아어 문장] - [뜻]
-       [한글 발음]
-    """
+    # 러시아어 학습 데이터베이스 로드
+    try:
+        with open('russian_learning_database.json', 'r', encoding='utf-8') as f:
+            database = json.load(f)
+    except FileNotFoundError:
+        logger.error("러시아어 학습 데이터베이스 파일이 없습니다!")
+        return
     
-    learning_content = await call_gemini(prompt)
+    import random
+    
+    # 30개 단어와 20개 회화 랜덤 선택
+    vocabulary = random.sample(database['vocabulary'], min(30, len(database['vocabulary'])))
+    conversations = random.sample(database['conversations'], min(20, len(database['conversations'])))
+    
+    # 단어 메시지 생성
+    words_message = "📚 **오늘의 러시아어 단어 (30개)**\n\n"
+    for i, word in enumerate(vocabulary, 1):
+        words_message += f"{i}. **{word['russian']}** [{word['pronunciation']}] - {word['korean']}\n"
+    
+    # 회화 메시지 생성
+    conversations_message = "💬 **오늘의 러시아어 회화 (20개)**\n\n"
+    for i, conv in enumerate(conversations, 1):
+        conversations_message += f"{i}. **{conv['russian']}**\n"
+        conversations_message += f"   [{conv['pronunciation']}]\n"
+        conversations_message += f"   💡 {conv['korean']}\n\n"
+    
+    # 긴 메시지 나누기
+    words_parts = await split_long_message(words_message)
+    conversations_parts = await split_long_message(conversations_message)
     
     for user_id, user_data in users.items():
         if user_data.get('subscribed_daily', False):
             try:
-                message = f"**☀️ 오늘의 러시아어 학습 (모스크바 기준 {datetime.now(MSK).strftime('%m월 %d일')})**\n\n{learning_content}"
-                await bot.send_message(chat_id=user_id, text=message)
+                # 헤더 메시지
+                header = f"☀️ **오늘의 러시아어 학습** (모스크바 기준 {datetime.now(MSK).strftime('%m월 %d일')})\n\n"
+                await bot.send_message(chat_id=user_id, text=header)
+                
+                # 단어 메시지 전송
+                for part in words_parts:
+                    await bot.send_message(chat_id=user_id, text=part)
+                    await asyncio.sleep(0.5)  # 메시지 간 간격
+                
+                # 회화 메시지 전송
+                for part in conversations_parts:
+                    await bot.send_message(chat_id=user_id, text=part)
+                    await asyncio.sleep(0.5)
                 
                 user_data['stats']['daily_words_received'] += 1
                 logger.info(f"Sent daily learning to {user_id}")
@@ -785,9 +1010,10 @@ async def main() -> None:
     application.add_handler(CommandHandler("trl", translate_long_command))
     application.add_handler(CommandHandler("ls", listening_command))
     application.add_handler(CommandHandler("trls", translate_listen_command))
+    application.add_handler(CommandHandler("model_status", model_status_command))
     
     scheduler = AsyncIOScheduler(timezone=MSK)
-    scheduler.add_job(send_daily_learning, 'cron', hour=6, minute=0, args=[application.bot])
+    scheduler.add_job(send_daily_learning, 'cron', hour=8, minute=0, args=[application.bot])
     
     logger.info("🤖 튜터 봇 '루샤'가 활동을 시작합니다...")
     
