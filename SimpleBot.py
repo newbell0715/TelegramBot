@@ -970,7 +970,7 @@ async def main() -> None:
     application.add_handler(CommandHandler("model_status", model_status_command))
     
     scheduler = AsyncIOScheduler(timezone=MSK)
-    scheduler.add_job(send_daily_learning, 'cron', hour=8, minute=0, args=[application.bot])
+    scheduler.add_job(send_daily_learning, 'cron', hour=7, minute=0, args=[application.bot])
     
     logger.info("🤖 튜터 봇 '루샤'가 활동을 시작합니다...")
     
