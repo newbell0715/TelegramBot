@@ -1,1 +1,1 @@
-web: python SimpleBot.py 
+web: python main.py 
