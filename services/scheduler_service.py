@@ -76,4 +76,5 @@ def create_scheduler(bot: Bot) -> AsyncIOScheduler:
     """스케줄러를 생성하고 설정"""
     scheduler = AsyncIOScheduler(timezone=MSK)
     scheduler.add_job(send_daily_learning, 'cron', hour=7, minute=0, args=[bot])
+    scheduler.add_job(send_daily_learning, 'cron', hour=12, minute=0, args=[bot])
     return scheduler 
