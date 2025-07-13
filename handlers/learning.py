@@ -92,7 +92,7 @@ async def subscribe_daily_command(update: Update, context: ContextTypes.DEFAULT_
     if not user['subscribed_daily']:
         users[str(chat_id)]['subscribed_daily'] = True
         save_user_data(users)
-        await update.message.reply_text("✅ 구독 완료! 내일부터 매일 아침 6시(모스크바 기준)에 학습 콘텐츠를 보내드릴게요. 기대해주세요!")
+        await update.message.reply_text("✅ 구독 완료! 내일부터 매일 아침 7시(모스크바 기준)에 학습 콘텐츠를 보내드릴게요. 기대해주세요!")
     else:
         await update.message.reply_text("이미 구독 중이십니다! 매일 아침을 기다려주세요. 😊")
 
