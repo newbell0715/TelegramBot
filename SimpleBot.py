@@ -41,16 +41,11 @@ genai.configure(api_key=GEMINI_API_KEY)
 MODEL_STATUS_FILE = 'model_status.json'
 
 # 모델 설정
-MODEL_CONFIG = {
-    'primary': {
-        'name': 'gemini-2.5-pro-latest',
-        'display_name': 'Gemini 2.5 Pro'
-    },
-    'fallback': {
-        'name': 'gemini-1.5-flash',
-        'display_name': 'Gemini 1.5 Flash'
-    }
-}
+MODEL_CONFIG = [
+    {'name': 'gemini-2.5-pro', 'display_name': 'Gemini 2.5 Pro'},
+    {'name': 'gemini-1.5-pro-latest', 'display_name': 'Gemini 1.5 Pro'},
+    {'name': 'gemini-1.5-flash', 'display_name': 'Gemini 1.5 Flash'}
+]
 
 # 모델 상태 로드/저장
 def load_model_status():
@@ -61,7 +56,7 @@ def load_model_status():
         except:
             pass
     return {
-        'current_model': 'primary',
+        'current_index': 0,
         'quota_exceeded_time': None,
         'last_primary_attempt': None,
         'failure_count': 0
@@ -78,12 +73,14 @@ def save_model_status(status):
 model_status = load_model_status()
 
 # 모델 인스턴스 생성
-def get_model(model_type='primary'):
-    model_name = MODEL_CONFIG[model_type]['name']
+def get_model(idx=None):
+    if idx is None:
+        idx = model_status['current_index']
+    model_name = MODEL_CONFIG[idx]['name']
     return genai.GenerativeModel(model_name)
 
 # 기본 모델 설정
-model = get_model(model_status['current_model'])
+model = get_model()
 
 # --- 데이터 파일 및 상수 ---
 USER_DATA_FILE = 'user_data.json'
@@ -148,99 +145,52 @@ def get_user(chat_id):
 # --- AI 기능 헬퍼 ---
 async def call_gemini(prompt: str) -> str:
     global model_status, model
-    
-    # 할당량 리셋 시간 체크 (GMT-8 기준 밤 12시)
     now = datetime.now(pytz.timezone('America/Los_Angeles'))
-    
-    # 주기적으로 primary 모델 복구 시도 (4시간마다)
-    if model_status['current_model'] == 'fallback':
-        last_attempt = model_status.get('last_primary_attempt')
-        if last_attempt:
-            last_attempt_time = datetime.fromisoformat(last_attempt)
-            if (now - last_attempt_time).total_seconds() > 4 * 3600:  # 4시간 후
-                logger.info("4시간 경과 - Primary 모델 복구 시도")
-                model_status['last_primary_attempt'] = now.isoformat()
-                model_status['current_model'] = 'primary'
-                model = get_model('primary')
+
+    # 할당량 리셋(매일 0시 PST) 후 2.5-pro로 복귀
+    if model_status['current_index'] != 0:
+        last_quota = model_status.get('quota_exceeded_time')
+        if last_quota:
+            last_quota_time = datetime.fromisoformat(last_quota)
+            if now.date() > datetime.fromisoformat(last_quota).date():
+                model_status['current_index'] = 0
+                model_status['failure_count'] = 0
+                model = get_model(0)
                 save_model_status(model_status)
-    
-    try:
-        # 현재 모델로 API 호출
-        response = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: model.generate_content(prompt)
-        )
-        
-        # 성공 시 failure_count 리셋
-        if model_status['failure_count'] > 0:
-            model_status['failure_count'] = 0
-            save_model_status(model_status)
-        
-        current_model_name = MODEL_CONFIG[model_status['current_model']]['display_name']
-        logger.info(f"✅ {current_model_name} 사용 성공")
-        
-        return response.text
-        
-    except Exception as e:
-        error_str = str(e).lower()
-        
-        # 할당량 초과 감지
-        if any(keyword in error_str for keyword in ['quota', '429', 'rate limit', 'resource_exhausted']):
-            logger.warning(f"❌ 할당량 초과 감지: {e}")
-            
-            # Primary 모델에서 에러 발생 시 Fallback으로 전환
-            if model_status['current_model'] == 'primary':
-                logger.info("🔄 Fallback 모델로 전환")
-                model_status['current_model'] = 'fallback'
+
+    for idx in range(model_status['current_index'], len(MODEL_CONFIG)):
+        try:
+            model = get_model(idx)
+            response = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: model.generate_content(prompt)
+            )
+            if idx != 0:
+                # 폴백에서 성공하면 다시 2.5-pro로 복귀 예약
+                model_status['current_index'] = 0
+                model_status['failure_count'] = 0
+                save_model_status(model_status)
+            logger.info(f"✅ {MODEL_CONFIG[idx]['display_name']} 사용 성공")
+            return response.text
+        except Exception as e:
+            error_str = str(e).lower()
+            logger.error(f"❌ {MODEL_CONFIG[idx]['display_name']} 에러: {e}")
+            # 할당량/404/429/Quota 에러 시 다음 모델로
+            if any(k in error_str for k in ['quota', '429', 'rate limit', 'resource_exhausted', 'not found', '404']):
+                model_status['current_index'] = idx + 1
                 model_status['quota_exceeded_time'] = now.isoformat()
                 model_status['failure_count'] = 0
-                model = get_model('fallback')
                 save_model_status(model_status)
-                
-                # Fallback 모델로 재시도
-                try:
-                    response = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: model.generate_content(prompt)
-                    )
-                    logger.info("✅ Fallback 모델 사용 성공")
-                    return response.text
-                except Exception as fallback_error:
-                    logger.error(f"❌ Fallback 모델도 실패: {fallback_error}")
-                    return "죄송합니다. 현재 AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. 😅"
-            
-            # Fallback 모델에서도 할당량 초과 시
+                continue
             else:
-                return "죄송합니다. 현재 AI 서비스 할당량이 모두 소진되었습니다. 내일 다시 시도해주세요. 😅"
-        
-        # 기타 에러
-        else:
-            model_status['failure_count'] += 1
-            save_model_status(model_status)
-            
-            logger.error(f"❌ Gemini API 오류 (시도 {model_status['failure_count']}): {e}")
-            
-            # 연속 실패 시 폴백 모델 시도
-            if model_status['failure_count'] >= 3 and model_status['current_model'] == 'primary':
-                logger.info("🔄 연속 실패로 인한 Fallback 모델 전환")
-                model_status['current_model'] = 'fallback'
-                model_status['failure_count'] = 0
-                model = get_model('fallback')
+                model_status['failure_count'] += 1
                 save_model_status(model_status)
-                
-                # Fallback 모델로 재시도
-                try:
-                    response = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: model.generate_content(prompt)
-                    )
-                    logger.info("✅ Fallback 모델 사용 성공")
-                    return response.text
-                except Exception as fallback_error:
-                    logger.error(f"❌ Fallback 모델도 실패: {fallback_error}")
-            
-            # 기본 번역 사전 활용 (번역 요청인 경우)
-            if any(keyword in prompt.lower() for keyword in ['번역', 'translate', 'перевод']):
-                return get_fallback_translation(prompt)
-            
-            return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
+                if model_status['failure_count'] >= 3 and idx < len(MODEL_CONFIG) - 1:
+                    model_status['current_index'] = idx + 1
+                    model_status['failure_count'] = 0
+                    save_model_status(model_status)
+                    continue
+                return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
+    return "죄송합니다. 현재 AI 서비스 할당량이 모두 소진되었습니다. 내일 다시 시도해주세요. 😅"
 
 def get_fallback_translation(prompt: str) -> str:
     """기본 번역 사전을 활용한 폴백 번역"""
@@ -901,14 +851,13 @@ async def model_status_command(update: Update, context: ContextTypes.DEFAULT_TYP
     
     global model_status
     
-    current_model = model_status['current_model']
-    model_name = MODEL_CONFIG[current_model]['display_name']
+    current_model = MODEL_CONFIG[model_status['current_index']]['display_name']
     
     # 상태 메시지 생성
     status_message = f"🤖 **현재 AI 모델 상태**\n\n"
-    status_message += f"📍 **현재 사용 중**: {model_name}\n"
+    status_message += f"📍 **현재 사용 중**: {current_model}\n"
     
-    if current_model == 'primary':
+    if model_status['current_index'] == 0:
         status_message += "✅ 최고 성능 모델 사용 중\n"
     else:
         status_message += "⚠️ 폴백 모델 사용 중\n"
@@ -928,8 +877,8 @@ async def model_status_command(update: Update, context: ContextTypes.DEFAULT_TYP
     
     # 모델 설정 정보
     status_message += f"\n🔧 **모델 설정**:\n"
-    status_message += f"• Primary: {MODEL_CONFIG['primary']['display_name']}\n"
-    status_message += f"• Fallback: {MODEL_CONFIG['fallback']['display_name']}\n"
+    status_message += f"• Primary: {MODEL_CONFIG[0]['display_name']}\n"
+    status_message += f"• Fallback: {MODEL_CONFIG[1]['display_name']}\n"
     
     await update.message.reply_text(status_message)
 
