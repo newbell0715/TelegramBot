@@ -5,7 +5,7 @@ import io
 from datetime import datetime, timedelta
 import pytz
 from gtts import gTTS
-from telegram import Update, Bot
+from telegram import Update, Bot, CallbackQuery
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -552,1108 +552,152 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_id = user.id
     user_data = get_user(chat_id)
     
-    await update.message.reply_text(
-        f"🌟 **지구 최고의 언어학습 봇에 오신 걸 환영합니다!** 🌟\n\n"
-        f"안녕하세요, {user.first_name}님!\n"
-        "저는 당신만의 **AI 러시아어 마스터 코치 '루샤(Rusya)'**입니다.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**🚀 세계 최고 수준의 혁신 기능들**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🎮 **게임화된 학습 시스템**\n"
-        "   • `/games` - 게임 메뉴 (4가지 재미있는 게임!)\n"
-        "   • `/game_word_match` - 단어 매칭 게임 (+20 EXP)\n"
-        "   • `/game_sentence_builder` - 문장 조립 게임 (+30 EXP)\n"
-        "   • `/game_speed_quiz` - 스피드 퀴즈 (+25 EXP)\n"
-        "   • `/game_pronunciation` - 발음 챌린지 (+35 EXP)\n\n"
-        "🧠 **개인화된 AI 튜터 시스템**\n"
-        "   • `/ai_tutor` - 개인 맞춤 학습 분석 및 추천\n"
-        "   • `/personalized_lesson` - AI가 설계한 맞춤형 수업\n"
-        "   • `/learning_analytics` - 상세 학습 패턴 분석\n"
-        "   • `/weak_area_practice` - 약점 분야 집중 보강\n"
-        "   • `/adaptive_quiz` - 레벨별 적응형 퀴즈\n\n"
-        "🎯 **스마트 학습 도구**\n"
-        "   • `/srs_review` - 과학적 간격 반복 학습\n"
-        "   • `/vocabulary_builder` - 체계적 어휘 확장\n"
-        "   • `/pronunciation_score` - 발음 점수 추적\n\n"
-        "🏰 **확장된 퀘스트 시스템** (5가지 시나리오!)\n"
-        "   • `/quest` - 실전 상황 시뮬레이션\n"
-        "   • 카페, 공항, 병원, 마트, 택시 등\n"
-        "   • `/action [러시아어]` - 퀘스트에서 행동\n"
-        "   • `/hint` - 퀘스트 힌트 | `/trans` - 번역 도움\n\n"
-        "✍️ **AI 작문 교정 시스템**\n"
-        "   • `/write [러시아어 문장]` - 완벽한 문법 교정\n\n"
-        "🌍 **고급 번역 시스템**\n"
-        "   • `/trs [언어] [텍스트]` - 빠른 간단 번역\n"
-        "   • `/trl [언어] [텍스트]` - 문법 분석 + 상세 설명\n"
-        "   • `/trls [언어] [텍스트]` - 번역 + 음성 한번에\n\n"
-        "🎵 **프리미엄 음성 학습**\n"
-        "   • `/ls [텍스트]` - 고품질 음성 변환\n\n"
-        "🏆 **성취 시스템**\n"
-        "   • `/achievements` - 8가지 성취 도전\n"
-        "   • 배지 수집 및 경험치 보상\n\n"
-        "📊 **학습 관리 & 통계**\n"
-        "   • `/my_progress` - 레벨, 경험치, 상세 통계\n"
-        "   • 자동 레벨업 & 성취도 추적\n\n"
-        "📅 **스마트 일일 학습** [[memory:3096416]]\n"
-        "   • `/subscribe_daily` - 매일 7시 새 콘텐츠 30개\n"
-        "   • `/unsubscribe_daily` - 구독 해제\n\n"
-        "👥 **소셜 학습 (곧 출시!)**\n"
-        "   • `/leaderboard` - 글로벌 순위\n"
-        "   • `/challenge_friend` - 친구 도전\n"
-        "   • `/study_buddy` - 스터디 파트너\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**🎯 추천 학습 로드맵**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "**🔰 초급자:**\n"
-        "1️⃣ `/ai_tutor` - 개인 맞춤 분석\n"
-        "2️⃣ `/quest` - 기초 회화 시작\n"
-        "3️⃣ `/games` - 재미있게 학습\n"
-        "4️⃣ `/vocabulary_builder` - 어휘 확장\n\n"
-        "**⚡ 중급자:**\n"
-        "1️⃣ `/personalized_lesson` - 맞춤 수업\n"
-        "2️⃣ `/write` - 작문 실력 향상\n"
-        "3️⃣ `/adaptive_quiz` - 실력 테스트\n"
-        "4️⃣ `/srs_review` - 과학적 복습\n\n"
-        "**🏆 고급자:**\n"
-        "1️⃣ `/weak_area_practice` - 약점 보강\n"
-        "2️⃣ `/game_pronunciation` - 발음 완성\n"
-        "3️⃣ `/learning_analytics` - 심화 분석\n"
-        "4️⃣ `/achievements` - 마스터 도전\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**📊 개인 현황**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"🎯 **현재 레벨:** {user_data['stats']['level']}/100\n"
-        f"⭐ **총 경험치:** {user_data['stats']['total_exp']} EXP\n"
-        f"🔥 **연속 학습일:** {user_data['learning']['daily_streak']}일\n"
-        f"🏅 **획득 성취:** {len(user_data['learning']['achievements'])}/8개\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**💡 특별 기능**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "• **명령어 없이도 대화 가능** - 그냥 메시지만 보내세요!\n"
-        "• **완전 무료** - 모든 프리미엄 기능 무제한 사용\n"
-        "• **다국어 지원** - 한국어, 러시아어, 영어\n"
-        "• **실시간 AI 분석** - 개인화된 학습 경험\n\n"
-        "🎯 **목표:** 100일 안에 러시아어 마스터 되기!\n\n"
-        "🚀 지금 바로 `/ai_tutor`로 시작하거나\n"
-        "📚 `/help`로 상세 가이드를 확인해보세요!\n\n"
-        "🌟 **함께 러시아어 마스터가 되어봅시다!** 🌟"
-    )
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # 전체 명령어 도움말을 카테고리별로 구성
-    help_text = """
-🤖 **'루샤' 봇 완전 사용법 안내** 🤖
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    
+    # 사용자 레벨에 따른 맞춤 환영 메시지
+    level = user_data['stats']['level']
+    if level <= 10:
+        level_status = "🔰 초보 모험가"
+        welcome_emoji = "🌱"
+    elif level <= 30:
+        level_status = "⚡ 중급 탐험가"  
+        welcome_emoji = "🚀"
+    elif level <= 60:
+        level_status = "🏆 고급 마스터"
+        welcome_emoji = "👑"
+    else:
+        level_status = "🌟 전설의 대가"
+        welcome_emoji = "💎"
+    
+    # 개인화된 환영 메시지
+    welcome_message = f"""
+{welcome_emoji} **러시아어 마스터 AI 코치 '루샤'** {welcome_emoji}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-**🏆 실전 학습 명령어**
+✨ **{user.first_name}님, 다시 만나서 반가워요!** ✨
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-**🎮 퀘스트 시스템**
-• `/quest` - 스토리 기반 러시아어 회화 학습
-  └ 카페, 레스토랑 등 실제 상황 시뮬레이션
-  └ 단계별 진행으로 자연스러운 학습
-
-• `/action [러시아어 문장]` - 퀘스트에서 행동하기
-  └ 예시: `/action Здравствуйте, кофе пожалуйста`
-  └ 키워드 인식으로 자동 진행
+🎯 **현재 상태**: {level_status} (Lv.{level})
+⭐ **총 경험치**: {user_data['stats']['total_exp']:,} EXP
+🔥 **연속 학습**: {user_data['learning']['daily_streak']}일
+🏅 **성취 배지**: {len(user_data['learning']['achievements'])}/8개
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-**✍️ AI 학습 도구**
+🚀 **오늘 뭘 해볼까요?**
 ━━━━━━━━━━━━━━━━━━━━━━━━
-
-**📝 작문 교정**
-• `/write [러시아어 문장]` - AI가 문법과 표현 교정
-  └ 예시: `/write Я хочу пить кофе`
-  └ 상세한 설명과 자연스러운 표현 제안
-  └ 칭찬과 함께 동기부여 피드백
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🌍 번역 시스템**
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-**⚡ 간단 번역**
-• `/trs [언어] [텍스트]` - 빠르고 정확한 번역
-  └ 예시: `/trs russian 안녕하세요` 또는 `/trs ru 감사합니다`
-  └ 지원언어: korean(kr), russian(ru), english(en)
-
-**📚 상세 번역**
-• `/trl [언어] [텍스트]` - 문법 분석 + 단어 설명
-  └ 예시: `/trl russian 좋은 아침이에요`
-  └ 여러 번역 제안 + 문법 구조 설명
-  └ 단어별 의미와 활용 정보
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🎵 음성 학습**
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-**🔊 음성 변환**
-• `/ls [텍스트]` - 텍스트를 자연스러운 음성으로
-  └ 예시: `/ls Привет, как дела?`
-  └ 한국어/러시아어 자동 인식
-  └ 고품질 Google TTS 엔진
-
-**🎯 번역+음성**
-• `/trls [언어] [텍스트]` - 번역과 음성을 한번에
-  └ 예시: `/trls russian 안녕하세요`
-  └ 번역 결과를 바로 음성으로 들을 수 있어 발음 학습에 최적
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**📊 학습 관리**
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-**📈 진도 확인**
-• `/my_progress` - 개인 학습 통계와 성과
-  └ 레벨, 경험치, 활동 기록 확인
-  └ 연속 학습일과 성취도 추적
-
-**📅 일일 학습**
-• `/subscribe_daily` - 매일 러시아어 콘텐츠 받기
-• `/unsubscribe_daily` - 일일 학습 구독 해제
-  └ 매일 아침 7시, 낮 12시 (모스크바 시간)
-  └ 새로운 단어 30개 + 회화 20개
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🔧 시스템 명령어**
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-• `/start` - 봇 시작 및 기능 소개
-• `/help` - 이 상세 도움말 보기
-• `/model_status` - 현재 AI 모델 상태 확인
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**💡 사용 팁**
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔹 **명령어 없이도 대화 가능**: 그냥 메시지를 보내면 AI가 답변
-🔹 **단계별 학습**: 퀘스트 → 작문 교정 → 번역 → 음성 순서 추천
-🔹 **꾸준한 학습**: 일일 학습 구독으로 습관 만들기
-🔹 **활용도 극대화**: 상세 번역으로 문법 이해 → 음성으로 발음 연습
-
-🎯 **목표**: 매일 조금씩, 꾸준히 러시아어 마스터하기!
     """
     
-    # 긴 메시지를 여러 부분으로 나누어 전송
-    message_parts = await split_long_message(help_text)
-    
-    for i, part in enumerate(message_parts):
-        if i == 0:
-            await update.message.reply_text(part)
-        else:
-            await update.message.reply_text(f"📄 (계속 {i+1}/{len(message_parts)})\n\n{part}")
-
-async def subscribe_daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    users = load_user_data()
-    user = get_user(chat_id)
-
-    if not user['subscribed_daily']:
-        users[str(chat_id)]['subscribed_daily'] = True
-        save_user_data(users)
-        await update.message.reply_text(
-            "✅ **일일 학습 구독 완료!**\n\n"
-            "📅 **배송 시간**: 매일 오전 7시, 낮 12시 (모스크바 기준)\n"
-            "📚 **학습 내용**: 러시아어 단어 30개 + 실용 회화 20개\n"
-            "🎯 **학습 효과**: 꾸준한 반복으로 어휘력 대폭 향상\n\n"
-            "💡 **팁**: 받은 단어들을 `/write` 명령어로 문장 만들기 연습하면 더욱 효과적!"
-        )
+    # 레벨별 맞춤 추천 버튼
+    if level <= 10:
+        primary_buttons = [
+            [InlineKeyboardButton("🎯 개인 맞춤 분석 시작", callback_data="ai_tutor"),
+             InlineKeyboardButton("🎮 재미있는 게임 체험", callback_data="games_menu")],
+            [InlineKeyboardButton("🏰 스토리 퀘스트 시작", callback_data="quest_start"),
+             InlineKeyboardButton("📚 기초 단어 학습", callback_data="vocab_basic")]
+        ]
+    elif level <= 30:
+        primary_buttons = [
+            [InlineKeyboardButton("🧠 맞춤형 AI 수업", callback_data="personalized_lesson"),
+             InlineKeyboardButton("✍️ 작문 실력 향상", callback_data="writing_practice")],
+            [InlineKeyboardButton("🎯 적응형 퀴즈", callback_data="adaptive_quiz"),
+             InlineKeyboardButton("📈 학습 패턴 분석", callback_data="learning_analytics")]
+        ]
     else:
-        await update.message.reply_text(
-            "📅 이미 일일 학습을 구독 중이십니다!\n\n"
-            "매일 아침과 낮에 새로운 러시아어 콘텐츠를 받아보고 계세요. 😊\n"
-            "구독을 해제하려면 `/unsubscribe_daily`를 입력하세요."
-        )
-
-async def unsubscribe_daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    users = load_user_data()
-    user = get_user(chat_id)
-
-    if user['subscribed_daily']:
-        users[str(chat_id)]['subscribed_daily'] = False
-        save_user_data(users)
-        await update.message.reply_text(
-            "✅ **일일 학습 구독 해제 완료**\n\n"
-            "😢 아쉽지만 언제든 다시 `/subscribe_daily`로 구독할 수 있습니다.\n"
-            "꾸준한 학습이 가장 중요하니까요!"
-        )
-    else:
-        await update.message.reply_text(
-            "📭 현재 일일 학습을 구독하고 있지 않습니다.\n\n"
-            "`/subscribe_daily`로 구독하시면 매일 새로운 러시아어 콘텐츠를 받아볼 수 있어요!"
-        )
-
-async def quest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    user = get_user(chat_id)
-    quest_state = user['quest_state']
-
-    if quest_state['current_quest'] is None:
-        quest_id = 'q1'
-        users = load_user_data()
-        users[str(chat_id)]['quest_state'] = {'current_quest': quest_id, 'stage': 1}
-        save_user_data(users)
-        
-        quest = QUEST_DATA[quest_id]
-        stage_data = quest['stages'][1]
-        
-        await update.message.reply_text(
-            f"**📜 새로운 퀘스트: {quest['title']}**\n\n"
-            f"🎬 **상황 설명:**\n{stage_data['description']}\n\n"
-            f"🗣️ **점원의 말:**\n`{stage_data['bot_message']}`\n\n"
-            f"➡️ **당신의 임무:**\n{stage_data['action_prompt']}\n\n"
-            f"💬 **사용법:** `/action [할 말]`을 사용해 대답해주세요.\n"
-            f"📝 **예시:** `/action Здравствуйте, кофе пожалуйста`\n\n"
-            f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
-        )
-    else:
-        quest_id = quest_state['current_quest']
-        stage = quest_state['stage']
-        quest = QUEST_DATA[quest_id]
-        
-        if stage > len(quest['stages']):
-            await update.message.reply_text(
-                "🎉 **모든 퀘스트 완료!**\n\n"
-                "축하합니다! 현재 제공되는 모든 퀘스트를 완료하셨습니다.\n"
-                "더 많은 퀘스트가 곧 업데이트될 예정이니 기대해주세요!"
-            )
-            return
-
-        stage_data = quest['stages'][stage]
-        
-        await update.message.reply_text(
-            f"**📜 퀘스트 진행 중: {quest['title']} (단계: {stage}/{len(quest['stages'])})**\n\n"
-            f"🎬 **현재 상황:**\n{stage_data['description']}\n\n"
-            f"🗣️ **상대방의 말:**\n`{stage_data['bot_message']}`\n\n"
-            f"➡️ **당신의 임무:**\n{stage_data['action_prompt']}\n\n"
-            f"💬 **사용법:** `/action [할 말]`을 사용해 대답해주세요.\n\n"
-            f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
-        )
-
-async def action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    user_text = " ".join(context.args)
+        primary_buttons = [
+            [InlineKeyboardButton("🎯 약점 분야 보강", callback_data="weak_area_practice"),
+             InlineKeyboardButton("🎤 발음 마스터", callback_data="pronunciation_master")],
+            [InlineKeyboardButton("🔬 고급 분석", callback_data="advanced_analytics"),
+             InlineKeyboardButton("🏆 마스터 도전", callback_data="master_challenges")]
+        ]
     
-    if not user_text:
-        await update.message.reply_text(
-            "**❌ 사용법 오류**\n\n"
-            "💬 **올바른 사용법:** `/action [러시아어 문장]`\n\n"
-            "📝 **예시:**\n"
-            "• `/action Здравствуйте` (안녕하세요)\n"
-            "• `/action Кофе, пожалуйста` (커피 주세요)\n"
-            "• `/action Спасибо` (감사합니다)\n\n"
-            "먼저 `/quest`로 퀘스트를 시작해주세요!"
-        )
-        return
-
-    users = load_user_data()
-    user = users[str(chat_id)]
-    quest_state = user['quest_state']
-
-    if quest_state['current_quest'] is None:
-        await update.message.reply_text(
-            "**❌ 진행 중인 퀘스트가 없습니다**\n\n"
-            "먼저 `/quest`로 새 퀘스트를 시작하세요!"
-        )
-        return
-
-    quest_id = quest_state['current_quest']
-    stage = quest_state['stage']
-    quest = QUEST_DATA[quest_id]
-    stage_data = quest['stages'][stage]
-
-    # 키워드 매칭 확인
-    if any(keyword in user_text.lower() for keyword in stage_data['keywords']):
-        next_stage = stage + 1
-        if next_stage > len(quest['stages']):
-            user['quest_state'] = {'current_quest': None, 'stage': 0}
-            user['stats']['quests_completed'] += 1
-            user['stats']['total_exp'] += 50  # 퀘스트 완료 시 경험치 추가
-            save_user_data(users)
-            
-            await update.message.reply_text(
-                f"🎉 **퀘스트 완료: {quest['title']}** 🎉\n\n"
-                f"🏆 축하합니다! 실전 러시아어 경험을 쌓으셨습니다.\n"
-                f"⭐ **획득한 경험치:** +50 EXP\n"
-                f"📈 **완료한 퀘스트:** {user['stats']['quests_completed']}개\n\n"
-                f"💡 **다음 단계:** `/my_progress`로 진도를 확인하거나\n"
-                f"새로운 퀘스트를 시작해보세요!"
-            )
-        else:
-            user['quest_state']['stage'] = next_stage
-            save_user_data(users)
-            
-            next_stage_data = quest['stages'][next_stage]
-            
-            await update.message.reply_text(
-                f"**✅ 단계 {stage} 성공!**\n\n"
-                f"🎬 **다음 상황:**\n{next_stage_data['description']}\n\n"
-                f"🗣️ **상대방의 말:**\n`{next_stage_data['bot_message']}`\n\n"
-                f"➡️ **당신의 임무:**\n{next_stage_data['action_prompt']}\n\n"
-                f"💬 계속해서 `/action [할 말]`로 대답해주세요!\n\n"
-                f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
-            )
-    else:
-        # 힌트 제공
-        keywords_hint = "`, `".join(stage_data['keywords'][:3])  # 처음 3개 키워드만
-        
-        await update.message.reply_text(
-            f"🤔 **조금 다른 표현이 필요할 것 같아요**\n\n"
-            f"💡 **힌트:** {stage_data['action_prompt']}\n\n"
-            f"🔑 **키워드 참고:** `{keywords_hint}` 등을 사용해보세요\n\n"
-            f"🔄 **다시 시도:** `/action [새로운 러시아어 문장]`"
-        )
-
-async def write_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    user_text = " ".join(context.args)
-
-    if not user_text:
-        await update.message.reply_text(
-            "**✍️ AI 작문 교정 사용법**\n\n"
-            "📝 **명령어:** `/write [교정받고 싶은 러시아어 문장]`\n\n"
-            "📚 **예시:**\n"
-            "• `/write Я хочу изучать русский язык`\n"
-            "• `/write Вчера я пошёл в магазин`\n"
-            "• `/write Мне нравится читать книги`\n\n"
-            "🎯 **제공 기능:**\n"
-            "✅ 문법 오류 수정\n"
-            "✅ 자연스러운 표현 제안\n"
-            "✅ 상세한 설명과 이유\n"
-            "✅ 칭찬과 동기부여\n\n"
-            "💡 **팁:** 틀려도 괜찮으니 자유롭게 문장을 만들어보세요!"
-        )
-        return
-
-    user = get_user(chat_id)
-    
-    processing_message = await update.message.reply_text(
-        "✍️ **AI가 문장을 교정하고 있습니다...**\n\n"
-        "⏳ 문법 분석 중...\n"
-        "🔍 자연스러운 표현 검토 중...\n"
-        "📝 교정 결과 작성 중..."
-    )
-
-    prompt = f"""
-    당신은 친절한 러시아어 원어민 선생님입니다. 학생이 아래 러시아어 문장을 작성했습니다.
-    문법 오류, 부자연스러운 표현을 찾아 수정하고, 왜 그렇게 수정했는지 한국어로 쉽고 명확하게 설명해주세요.
-    칭찬을 섞어 동기를 부여해주세요.
-
-    학생의 문장: "{user_text}"
-
-    아래와 같은 형식으로 답변해주세요:
-
-    **📝 학생 문장:**
-    [학생의 문장]
-
-    **✨ 교정된 문장:**
-    [자연스럽고 올바른 문장]
-
-    **👨‍🏫 선생님의 피드백:**
-    [칭찬과 함께, 어떤 부분이 왜 틀렸고 어떻게 고쳐야 하는지에 대한 구체적인 설명]
-
-    **💡 추가 학습 팁:**
-    [비슷한 실수를 피하는 방법이나 관련 문법 규칙]
-    """
-    
-    corrected_text = await call_gemini(prompt)
-    
-    await processing_message.delete()
-    await update.message.reply_text(corrected_text)
-
-    # 통계 업데이트
-    users = load_user_data()
-    users[str(chat_id)]['stats']['sentences_corrected'] += 1
-    users[str(chat_id)]['stats']['total_exp'] += 10  # 작문 교정 시 경험치 추가
-    save_user_data(users)
-
-async def my_progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.effective_chat.id
-    user_data = get_user(chat_id)
-    stats = user_data['stats']
-
-    start_date = datetime.fromisoformat(stats['start_date'])
-    days_since_start = (datetime.now(MSK) - start_date).days + 1
-    
-    # 레벨과 경험치 계산
-    exp = stats.get('total_exp', 0)
-    level = stats.get('level', 1)
-    exp_for_current_level = (level - 1) * 100
-    exp_for_next_level = level * 100
-    exp_progress = exp - exp_for_current_level
-    
-    # 진행률 바 생성
-    progress_bar_length = 10
-    filled = int((exp_progress / 100) * progress_bar_length)
-    progress_bar = "▓" * filled + "░" * (progress_bar_length - filled)
-    
-    # 활동 점수 계산
-    total_activities = (
-        stats.get('sentences_corrected', 0) + 
-        stats.get('translations_made', 0) + 
-        stats.get('quests_completed', 0) + 
-        stats.get('tts_generated', 0)
-    )
-    
-    # 일일 평균 활동
-    daily_average = round(total_activities / days_since_start, 1) if days_since_start > 0 else 0
-    
-    progress_report = f"""
-📊 **{update.effective_user.first_name}님의 러시아어 학습 리포트** 📊
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🔰 레벨 정보**
-━━━━━━━━━━━━━━━━━━━━━━━━
-• **현재 레벨:** {level} 📈
-• **경험치:** {exp_progress}/100 EXP
-• **진행률:** {progress_bar} ({round((exp_progress/100)*100, 1)}%)
-• **총 획득 EXP:** {exp} ⭐
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**📈 학습 활동 기록**
-━━━━━━━━━━━━━━━━━━━━━━━━
-• ✍️ **AI 작문 교정:** {stats.get('sentences_corrected', 0)}회
-• 🌍 **번역 요청:** {stats.get('translations_made', 0)}회
-• 🎵 **음성 변환:** {stats.get('tts_generated', 0)}회
-• 🏆 **완료한 퀘스트:** {stats.get('quests_completed', 0)}개
-• 📚 **일일 학습 수신:** {stats.get('daily_words_received', 0)}회
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🔥 학습 통계**
-━━━━━━━━━━━━━━━━━━━━━━━━
-• **학습 시작일:** {start_date.strftime('%Y년 %m월 %d일')}
-• **총 학습일:** {days_since_start}일
-• **총 활동 수:** {total_activities}회
-• **일일 평균 활동:** {daily_average}회/일
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**🎯 다음 목표**
-━━━━━━━━━━━━━━━━━━━━━━━━
-• **레벨업까지:** {100 - exp_progress} EXP 필요
-• **추천 활동:** 작문 교정 {(100-exp_progress)//10 + 1}회 더 하면 레벨업!
-
-💡 **루샤의 피드백:**
-정말 꾸준히 잘하고 계세요! 특히 {'작문 연습' if stats.get('sentences_corrected', 0) > 5 else '퀘스트 도전' if stats.get('quests_completed', 0) > 0 else '번역 활용'}을 많이 하신 점이 인상 깊네요. 
-언어 실력 향상의 비결은 꾸준함입니다. 화이팅! 🚀
-    """
-    
-    await update.message.reply_text(progress_report)
-
-# 기존 번역 명령어들 (사용법 향상)
-async def translate_simple_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """간단한 번역 명령어 (/trs) - 업그레이드된 사용법 안내"""
-    try:
-        args = context.args
-        if len(args) < 2:
-            await update.message.reply_text(
-                "**⚡ 간단 번역 사용법** ⚡\n\n"
-                "📝 **명령어:** `/trs [언어] [텍스트]`\n\n"
-                "🌍 **지원 언어:**\n"
-                "• `korean` 또는 `kr` - 한국어\n"
-                "• `russian` 또는 `ru` - 러시아어\n"
-                "• `english` 또는 `en` - 영어\n\n"
-                "📚 **사용 예시:**\n"
-                "• `/trs russian 안녕하세요` → 러시아어로 번역\n"
-                "• `/trs korean Привет` → 한국어로 번역\n"
-import os
-import logging
-import json
-import io
-from datetime import datetime, timedelta
-import pytz
-from gtts import gTTS
-from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-import google.generativeai as genai
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import asyncio
-
-# --- 기본 설정 ---
-
-# 러시아 모스크바 시간대 설정
-MSK = pytz.timezone('Europe/Moscow')
-
-# 로깅 설정 (러시아 시간대 적용)
-class MSKFormatter(logging.Formatter):
-    def formatTime(self, record, datefmt=None):
-        dt = datetime.fromtimestamp(record.created, MSK)
-        if datefmt:
-            return dt.strftime(datefmt)
-        else:
-            return dt.strftime('%Y-%m-%d %H:%M:%S')
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
-for handler in logging.root.handlers:
-    handler.setFormatter(MSKFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-
-# --- API 키 및 토큰 ---
-GEMINI_API_KEY = "AIzaSyCmH1flv0HSRp8xYa1Y8oL7xnpyyQVuIw8"
-BOT_TOKEN = "8064422632:AAFkFqQDA_35OCa5-BFxeHPA9_hil4cY8Rg"
-
-# --- Gemini AI 설정 ---
-genai.configure(api_key=GEMINI_API_KEY)
-
-# 모델 상태 관리 파일
-MODEL_STATUS_FILE = 'model_status.json'
-
-# 모델 설정
-MODEL_CONFIG = [
-    {'name': 'gemini-2.5-pro', 'display_name': 'Gemini 2.5 Pro'},
-    {'name': 'gemini-1.5-pro-latest', 'display_name': 'Gemini 1.5 Pro'},
-    {'name': 'gemini-1.5-flash', 'display_name': 'Gemini 1.5 Flash'}
-]
-
-# 모델 상태 로드/저장
-def load_model_status():
-    if os.path.exists(MODEL_STATUS_FILE):
-        try:
-            with open(MODEL_STATUS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {
-        'current_index': 0,
-        'quota_exceeded_time': None,
-        'last_primary_attempt': None,
-        'failure_count': 0
-    }
-
-def save_model_status(status):
-    try:
-        with open(MODEL_STATUS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(status, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        logger.error(f"모델 상태 저장 오류: {e}")
-
-# 현재 모델 상태
-model_status = load_model_status()
-
-# 모델 인스턴스 생성
-def get_model(idx=None):
-    if idx is None:
-        idx = model_status['current_index']
-    model_name = MODEL_CONFIG[idx]['name']
-    return genai.GenerativeModel(model_name)
-
-# 기본 모델 설정
-model = get_model()
-
-# --- 데이터 파일 및 상수 ---
-USER_DATA_FILE = 'user_data.json'
-
-# === 🌟 혁신적인 학습 시스템 ===
-
-# 간격 반복 학습 설정 (Spaced Repetition System)
-SRS_INTERVALS = [1, 3, 7, 14, 30, 90, 180, 365]  # 일 단위
-DIFFICULTY_MULTIPLIERS = {'easy': 1.3, 'good': 1.0, 'hard': 0.8, 'again': 0.5}
-
-# 발음 평가 기준
-PRONUNCIATION_CRITERIA = {
-    'excellent': {'score': 90, 'emoji': '🏆', 'message': '완벽한 발음입니다!'},
-    'very_good': {'score': 80, 'emoji': '🌟', 'message': '매우 좋은 발음이에요!'},
-    'good': {'score': 70, 'emoji': '👍', 'message': '좋은 발음입니다!'},
-    'fair': {'score': 60, 'emoji': '👌', 'message': '괜찮은 발음이에요.'},
-    'needs_practice': {'score': 50, 'emoji': '📚', 'message': '조금 더 연습해보세요.'}
-}
-
-# 🎮 게임화된 학습 모듈
-LEARNING_GAMES = {
-    'word_match': {
-        'name': '단어 매칭 게임',
-        'description': '러시아어와 한국어 단어를 매칭하세요',
-        'exp_reward': 20,
-        'time_limit': 60
-    },
-    'sentence_builder': {
-        'name': '문장 조립 게임',
-        'description': '단어들을 올바른 순서로 배열하세요',
-        'exp_reward': 30,
-        'time_limit': 90
-    },
-    'speed_quiz': {
-        'name': '스피드 퀴즈',
-        'description': '빠르게 답하는 퀴즈',
-        'exp_reward': 25,
-        'time_limit': 30
-    },
-    'pronunciation_challenge': {
-        'name': '발음 챌린지',
-        'description': '정확한 발음으로 점수를 얻으세요',
-        'exp_reward': 35,
-        'time_limit': 120
-    }
-}
-
-# 🏆 성취 시스템
-ACHIEVEMENTS = {
-    'first_quest': {'name': '첫 모험가', 'description': '첫 퀘스트 완료', 'exp': 50, 'badge': '🎯'},
-    'daily_streak_7': {'name': '일주일 도전자', 'description': '7일 연속 학습', 'exp': 100, 'badge': '🔥'},
-    'daily_streak_30': {'name': '한 달 마스터', 'description': '30일 연속 학습', 'exp': 500, 'badge': '👑'},
-    'writing_master': {'name': '작문 마스터', 'description': '100개 문장 교정', 'exp': 200, 'badge': '✍️'},
-    'pronunciation_pro': {'name': '발음 전문가', 'description': '발음 점수 90점 이상 10회', 'exp': 300, 'badge': '🎤'},
-    'quiz_champion': {'name': '퀴즈 챔피언', 'description': '퀴즈 50회 완료', 'exp': 250, 'badge': '🧠'},
-    'translator': {'name': '번역 전문가', 'description': '500회 번역 완료', 'exp': 150, 'badge': '🌍'},
-    'social_learner': {'name': '소셜 학습자', 'description': '친구와 대결 5회', 'exp': 100, 'badge': '👥'}
-}
-
-# 🌍 확장된 퀘스트 시나리오
-QUEST_DATA = {
-    'q1': {
-        'title': "카페에서 주문하기",
-        'difficulty': 'beginner',
-        'exp_reward': 50,
-        'stages': {
-            1: {
-                'description': "당신은 모스크바의 한 카페에 들어왔습니다. 점원이 인사를 건넵니다.",
-                'bot_message': "Здравствуйте! Что будете заказывать? (안녕하세요! 무엇을 주문하시겠어요?)",
-                'action_prompt': "인사하고 커피를 주문해보세요.",
-                'keywords': ['кофе', 'американо', 'латте', 'капучино', 'чай', 'здравствуйте'],
-                'hints': ['Здравствуйте! (안녕하세요)', 'Кофе, пожалуйста (커피 주세요)']
-            },
-            2: {
-                'description': "주문을 완료했습니다! 이제 점원이 결제를 요청합니다.",
-                'bot_message': "Отлично! С вас 300 рублей. (좋아요! 300루블입니다.)",
-                'action_prompt': "카드로 계산하겠다고 말해보세요.",
-                'keywords': ['карта', 'картой', 'оплачу'],
-                'hints': ['Картой, пожалуйста (카드로 주세요)', 'Можно картой? (카드 결제 가능한가요?)']
-            },
-            3: {
-                'description': "결제까지 마쳤습니다. 점원이 주문한 음료가 나왔다고 알려줍니다.",
-                'bot_message': "Ваш кофе готов! (주문하신 커피 나왔습니다!)",
-                'action_prompt': "감사를 표하고 퀘스트를 완료하세요!",
-                'keywords': ['спасибо', 'благодарю', 'отлично'],
-                'hints': ['Спасибо! (감사합니다)', 'Большое спасибо! (정말 감사합니다)']
-            }
-        }
-    },
-    'q2': {
-        'title': "공항에서 체크인하기",
-        'difficulty': 'intermediate',
-        'exp_reward': 80,
-        'stages': {
-            1: {
-                'description': "도모데도보 공항에 도착했습니다. 체크인 카운터에서 직원이 기다리고 있습니다.",
-                'bot_message': "Добро пожаловать! Ваш паспорт и билет, пожалуйста. (환영합니다! 여권과 티켓을 주세요.)",
-                'action_prompt': "여권과 티켓을 제시한다고 말해보세요.",
-                'keywords': ['паспорт', 'билет', 'вот', 'пожалуйста'],
-                'hints': ['Вот мой паспорт и билет (여기 제 여권과 티켓입니다)']
-            },
-            2: {
-                'description': "서류 확인이 완료되었습니다. 직원이 좌석을 물어봅니다.",
-                'bot_message': "Хотите место у окна или у прохода? (창가석과 통로석 중 어느 것을 원하시나요?)",
-                'action_prompt': "창가석을 원한다고 말해보세요.",
-                'keywords': ['окно', 'окна', 'место у окна'],
-                'hints': ['Место у окна, пожалуйста (창가석으로 주세요)']
-            },
-            3: {
-                'description': "좌석 배정이 완료되었습니다. 직원이 수하물에 대해 묻습니다.",
-                'bot_message': "Есть ли у вас багаж для сдачи? (맡길 짐이 있으신가요?)",
-                'action_prompt': "한 개의 가방이 있다고 답해보세요.",
-                'keywords': ['багаж', 'сумка', 'чемодан', 'один', 'одна'],
-                'hints': ['Да, один чемодан (네, 가방 하나 있습니다)']
-            }
-        }
-    },
-    'q3': {
-        'title': "병원에서 진료받기",
-        'difficulty': 'advanced',
-        'exp_reward': 120,
-        'stages': {
-            1: {
-                'description': "몸이 아파서 병원에 왔습니다. 접수처에서 간호사가 증상을 묻습니다.",
-                'bot_message': "Что вас беспокоит? (어떤 증상이 있으신가요?)",
-                'action_prompt': "머리가 아프다고 말해보세요.",
-                'keywords': ['голова', 'болит', 'головная боль'],
-                'hints': ['У меня болит голова (머리가 아픕니다)']
-            },
-            2: {
-                'description': "증상을 확인한 간호사가 의사를 만나라고 합니다.",
-                'bot_message': "Пройдите в кабинет номер 5, доктор вас примет. (5번 진료실로 가시면 의사가 진료해드릴 겁니다.)",
-                'action_prompt': "감사 인사를 하고 어디인지 다시 물어보세요.",
-                'keywords': ['спасибо', 'где', 'кабинет', 'номер'],
-                'hints': ['Спасибо. Где кабинет номер 5? (감사합니다. 5번 진료실이 어디인가요?)']
-            }
-        }
-    },
-    'q4': {
-        'title': "마트에서 쇼핑하기",
-        'difficulty': 'beginner',
-        'exp_reward': 60,
-        'stages': {
-            1: {
-                'description': "마트에서 우유를 찾고 있습니다. 직원에게 물어봅니다.",
-                'bot_message': "Чем могу помочь? (무엇을 도와드릴까요?)",
-                'action_prompt': "우유가 어디 있는지 물어보세요.",
-                'keywords': ['молоко', 'где', 'найти'],
-                'hints': ['Где найти молоко? (우유를 어디서 찾을 수 있나요?)']
-            },
-            2: {
-                'description': "직원이 우유의 위치를 알려줍니다.",
-                'bot_message': "Молочные продукты в третьем ряду, справа. (유제품은 3번째 줄 오른쪽에 있습니다.)",
-                'action_prompt': "감사 인사를 해보세요.",
-                'keywords': ['спасибо', 'благодарю'],
-                'hints': ['Спасибо большое! (정말 감사합니다!)']
-            }
-        }
-    },
-    'q5': {
-        'title': "택시 타기",
-        'difficulty': 'intermediate',
-        'exp_reward': 70,
-        'stages': {
-            1: {
-                'description': "택시를 탔습니다. 기사가 목적지를 묻습니다.",
-                'bot_message': "Куда едем? (어디로 가시나요?)",
-                'action_prompt': "크렘린으로 가달라고 말해보세요.",
-                'keywords': ['кремль', 'поехали', 'пожалуйста'],
-                'hints': ['В Кремль, пожалуйста (크렘린으로 가주세요)']
-            },
-            2: {
-                'description': "기사가 시간을 알려줍니다.",
-                'bot_message': "Примерно 20 минут. (약 20분 걸립니다.)",
-                'action_prompt': "좋다고 대답해보세요.",
-                'keywords': ['хорошо', 'отлично', 'понятно'],
-                'hints': ['Хорошо, спасибо (좋습니다, 감사합니다)']
-            }
-        }
-    }
-}
-
-# 🎵 발음 연습용 문장들
-PRONUNCIATION_SENTENCES = {
-    'beginner': [
-        {'text': 'Привет, как дела?', 'translation': '안녕, 어떻게 지내?', 'focus': '인사말'},
-        {'text': 'Меня зовут Анна.', 'translation': '제 이름은 안나입니다.', 'focus': '자기소개'},
-        {'text': 'Сколько это стоит?', 'translation': '이것이 얼마인가요?', 'focus': '쇼핑'},
-        {'text': 'Где находится музей?', 'translation': '박물관이 어디에 있나요?', 'focus': '길 묻기'},
-    ],
-    'intermediate': [
-        {'text': 'Я изучаю русский язык уже год.', 'translation': '저는 러시아어를 공부한 지 벌써 1년이 됩니다.', 'focus': '시간 표현'},
-        {'text': 'Мне нравится читать книги по вечерам.', 'translation': '저는 저녁에 책 읽기를 좋아합니다.', 'focus': '취미 표현'},
-        {'text': 'Завтра у меня важная встреча.', 'translation': '내일 저에게 중요한 만남이 있습니다.', 'focus': '미래 계획'},
-    ],
-    'advanced': [
-        {'text': 'Несмотря на трудности, он продолжал изучать язык.', 'translation': '어려움에도 불구하고 그는 언어 공부를 계속했습니다.', 'focus': '복합 문장'},
-        {'text': 'Если бы я знал об этом раньше, то поступил бы по-другому.', 'translation': '만약 제가 이것을 더 일찍 알았다면, 다르게 행동했을 것입니다.', 'focus': '가정법'},
+    # 공통 기능 버튼
+    common_buttons = [
+        [InlineKeyboardButton("📊 학습 진도 확인", callback_data="my_progress"),
+         InlineKeyboardButton("📅 일일 학습 설정", callback_data="daily_learning")],
+        [InlineKeyboardButton("🌍 번역 & 음성", callback_data="translation_menu"),
+         InlineKeyboardButton("❓ 도움말 & 가이드", callback_data="help_guide")]
     ]
-}
+    
+    all_buttons = primary_buttons + common_buttons
+    reply_markup = InlineKeyboardMarkup(all_buttons)
+    
+    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+    
+    # 개인화된 학습 팁 메시지
+    tip_message = f"""
+💡 **{user.first_name}님을 위한 오늘의 학습 팁** 💡
 
-# --- 사용자 데이터 관리 ---
-def load_user_data():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+━━━━━━━━━━━━━━━━━━━━━━━━
+    """
+    
+    # 레벨별 맞춤 팁
+    if level <= 10:
+        tip_message += """
+🌱 **초보자 특별 가이드**
 
-def save_user_data(data):
-    with open(USER_DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+• **단계별 학습**: 퀘스트 → 게임 → 단어 암기 순서 추천
+• **하루 목표**: 새 단어 5-10개씩 꾸준히
+• **핵심 명령어**: `/quest`, `/games`, `/ai_tutor`
+• **학습 시간**: 하루 15-20분이면 충분해요!
 
-def get_user(chat_id):
-    users = load_user_data()
-    user_id = str(chat_id)
-    if user_id not in users:
-        users[user_id] = {
-            'subscribed_daily': False,
-            'quest_state': {'current_quest': None, 'stage': 0},
-            'stats': {
-                'start_date': datetime.now(MSK).isoformat(),
-                'last_active_date': datetime.now(MSK).isoformat(),
-                'quests_completed': 0,
-                'sentences_corrected': 0,
-                'translations_made': 0,
-                'tts_generated': 0,
-                'daily_words_received': 0,
-                'total_exp': 0,
-                'level': 1
-            },
-            # === 🌟 새로운 고급 학습 데이터 ===
-            'learning': {
-                'vocabulary_srs': {},  # 간격 반복 학습 단어들
-                'pronunciation_scores': [],  # 발음 점수 기록
-                'game_stats': {
-                    'word_match': {'played': 0, 'won': 0, 'best_score': 0},
-                    'sentence_builder': {'played': 0, 'won': 0, 'best_score': 0},
-                    'speed_quiz': {'played': 0, 'won': 0, 'best_score': 0},
-                    'pronunciation_challenge': {'played': 0, 'won': 0, 'best_score': 0}
-                },
-                'achievements': [],  # 획득한 성취
-                'daily_streak': 0,  # 연속 학습일
-                'last_study_date': None,
-                'weak_areas': [],  # 약점 분야
-                'strength_areas': [],  # 강점 분야
-                'personalized_content': [],  # 개인화된 학습 콘텐츠
-                'learning_style': 'balanced',  # visual, auditory, kinesthetic, balanced
-                'difficulty_preference': 'adaptive'  # easy, medium, hard, adaptive
-            },
-            'social': {
-                'friends': [],  # 친구 목록
-                'challenges_sent': 0,
-                'challenges_won': 0,
-                'ranking_points': 0
-            }
-        }
-        save_user_data(users)
-    
-    # 기존 사용자 데이터에 새 필드 추가 (하위 호환성)
-    if 'learning' not in users[user_id]:
-        users[user_id]['learning'] = {
-            'vocabulary_srs': {},
-            'pronunciation_scores': [],
-            'game_stats': {
-                'word_match': {'played': 0, 'won': 0, 'best_score': 0},
-                'sentence_builder': {'played': 0, 'won': 0, 'best_score': 0},
-                'speed_quiz': {'played': 0, 'won': 0, 'best_score': 0},
-                'pronunciation_challenge': {'played': 0, 'won': 0, 'best_score': 0}
-            },
-            'achievements': [],
-            'daily_streak': 0,
-            'last_study_date': None,
-            'weak_areas': [],
-            'strength_areas': [],
-            'personalized_content': [],
-            'learning_style': 'balanced',
-            'difficulty_preference': 'adaptive'
-        }
-    
-    if 'social' not in users[user_id]:
-        users[user_id]['social'] = {
-            'friends': [],
-            'challenges_sent': 0,
-            'challenges_won': 0,
-            'ranking_points': 0
-        }
-    
-    # 일일 연속 학습 체크
-    today = datetime.now(MSK).date()
-    last_study = users[user_id]['learning']['last_study_date']
-    
-    if last_study:
-        last_study_date = datetime.fromisoformat(last_study).date()
-        if today == last_study_date + timedelta(days=1):
-            users[user_id]['learning']['daily_streak'] += 1
-        elif today != last_study_date:
-            users[user_id]['learning']['daily_streak'] = 1
+🎯 **추천 루틴**: 
+1. 퀘스트로 상황 학습
+2. 게임으로 재미있게 복습  
+3. AI 튜터로 개인 분석
+        """
+    elif level <= 30:
+        tip_message += """
+⚡ **중급자 성장 가이드**
+
+• **실력 향상**: 작문 연습으로 문법 마스터
+• **하루 목표**: 새 표현 10-15개 + 문장 작성 3개
+• **핵심 명령어**: `/write`, `/personalized_lesson`
+• **학습 시간**: 하루 20-30분 집중 학습
+
+🎯 **추천 루틴**:
+1. 맞춤 수업으로 체계적 학습
+2. 작문 교정으로 실력 점검
+3. 적응형 퀴즈로 실력 측정
+        """
     else:
-        users[user_id]['learning']['daily_streak'] = 1
-    
-    users[user_id]['learning']['last_study_date'] = today.isoformat()
-    users[user_id]['stats']['last_active_date'] = datetime.now(MSK).isoformat()
-    save_user_data(users)
-    return users[user_id]
+        tip_message += """
+🏆 **고급자 마스터 가이드**
 
-# --- AI 기능 헬퍼 ---
-async def call_gemini(prompt: str) -> str:
-    global model_status, model
-    now = datetime.now(pytz.timezone('America/Los_Angeles'))
+• **완성도 향상**: 발음과 고급 표현 집중
+• **하루 목표**: 고급 어휘 15-20개 + 복합 문장
+• **핵심 명령어**: `/weak_area_practice`, `/pronunciation_score`  
+• **학습 시간**: 하루 30-45분 심화 학습
 
-    # 할당량 리셋(매일 0시 PST) 후 2.5-pro로 복귀
-    if model_status['current_index'] != 0:
-        last_quota = model_status.get('quota_exceeded_time')
-        if last_quota:
-            last_quota_time = datetime.fromisoformat(last_quota)
-            if now.date() > datetime.fromisoformat(last_quota).date():
-                model_status['current_index'] = 0
-                model_status['failure_count'] = 0
-                model = get_model(0)
-                save_model_status(model_status)
+🎯 **추천 루틴**:
+1. 약점 분야 집중 보강
+2. 발음 완성도 향상
+3. 고급 분석으로 완벽함 추구
+        """
+    
+    tip_message += f"""
 
-    for idx in range(model_status['current_index'], len(MODEL_CONFIG)):
-        try:
-            model = get_model(idx)
-            response = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: model.generate_content(prompt)
-            )
-            if idx != 0:
-                # 폴백에서 성공하면 다시 2.5-pro로 복귀 예약
-                model_status['current_index'] = 0
-                model_status['failure_count'] = 0
-                save_model_status(model_status)
-            logger.info(f"✅ {MODEL_CONFIG[idx]['display_name']} 사용 성공")
-            return response.text
-        except Exception as e:
-            error_str = str(e).lower()
-            logger.error(f"❌ {MODEL_CONFIG[idx]['display_name']} 에러: {e}")
-            # 할당량/404/429/Quota 에러 시 다음 모델로
-            if any(k in error_str for k in ['quota', '429', 'rate limit', 'resource_exhausted', 'not found', '404']):
-                model_status['current_index'] = idx + 1
-                model_status['quota_exceeded_time'] = now.isoformat()
-                model_status['failure_count'] = 0
-                save_model_status(model_status)
-                continue
-            else:
-                model_status['failure_count'] += 1
-                save_model_status(model_status)
-                if model_status['failure_count'] >= 3 and idx < len(MODEL_CONFIG) - 1:
-                    model_status['current_index'] = idx + 1
-                    model_status['failure_count'] = 0
-                    save_model_status(model_status)
-                    continue
-                return "죄송합니다. AI 모델과 통신 중 오류가 발생했습니다. 😅"
-    return "죄송합니다. 현재 AI 서비스 할당량이 모두 소진되었습니다. 내일 다시 시도해주세요. 😅"
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 **특별 혜택** 🎉
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-def get_fallback_translation(prompt: str) -> str:
-    """기본 번역 사전을 활용한 폴백 번역"""
-    basic_translations = {
-        'привет': '안녕하세요',
-        'спасибо': '감사합니다',
-        'пожалуйста': '천만에요',
-        'извините': '죄송합니다',
-        'да': '네',
-        'нет': '아니요',
-        'хорошо': '좋아요',
-        'до свидания': '안녕히 가세요',
-        'как дела': '어떻게 지내세요',
-        'меня зовут': '제 이름은',
-        'я не понимаю': '이해하지 못하겠습니다',
-        'помогите': '도와주세요',
-        'где': '어디에',
-        'что': '무엇',
-        'кто': '누구'
-    }
-    
-    prompt_lower = prompt.lower()
-    for russian, korean in basic_translations.items():
-        if russian in prompt_lower:
-            return f"기본 번역: {russian} → {korean}\n\n⚠️ 현재 AI 서비스에 일시적인 문제가 있어 기본 번역만 제공됩니다."
-    
-    return "죄송합니다. 현재 AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. 😅"
+🆓 **완전 무료**: 모든 AI 기능 무제한 사용
+🎵 **음성 지원**: 모든 텍스트 음성 변환 가능
+🤖 **AI 튜터**: 개인화된 학습 분석 & 추천
+📱 **언제든지**: 명령어 없이도 자유롭게 대화
 
-async def convert_text_to_speech(text: str, lang: str = "auto") -> bytes:
-    """무료 Google TTS로 텍스트를 음성으로 변환 (한국어, 러시아어 지원)"""
-    try:
-        # 언어 자동 감지 또는 지정
-        if lang == "auto":
-            # 한글이 포함되어 있으면 한국어, 키릴 문자가 포함되어 있으면 러시아어
-            if any('\u3131' <= char <= '\u3163' or '\uac00' <= char <= '\ud7a3' for char in text):
-                detected_lang = "ko"
-                lang_name = "한국어"
-            elif any('\u0400' <= char <= '\u04ff' for char in text):
-                detected_lang = "ru"
-                lang_name = "러시아어"
-            else:
-                # 기본값을 한국어로 설정
-                detected_lang = "ko"
-                lang_name = "한국어 (기본값)"
-        else:
-            detected_lang = lang
-            lang_name = "러시아어" if lang == "ru" else "한국어" if lang == "ko" else lang
-            
-        logger.info(f"TTS 시작 - 텍스트: '{text}', 감지된 언어: {lang_name} ({detected_lang})")
-        
-        # 텍스트가 너무 길면 자르기 (gTTS 제한: 200자 정도)
-        if len(text) > 200:
-            text = text[:200] + "..."
-            logger.info(f"텍스트 자름 - 새 길이: {len(text)}")
-        
-        # gTTS 객체 생성
-        logger.info("gTTS 객체 생성 중...")
-        tts = gTTS(text=text, lang=detected_lang, slow=False)
-        
-        # 메모리에서 음성 파일 생성
-        logger.info("음성 파일 생성 중...")
-        audio_buffer = io.BytesIO()
-        tts.write_to_fp(audio_buffer)
-        audio_buffer.seek(0)
-        
-        audio_data = audio_buffer.getvalue()
-        logger.info(f"음성 파일 생성 완료 - 크기: {len(audio_data)} bytes, 언어: {lang_name}")
-        
-        return audio_data
-    except Exception as e:
-        logger.error(f"TTS 오류: {e}")
-        import traceback
-        logger.error(f"상세 오류: {traceback.format_exc()}")
-        return None
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌟 **함께 러시아어 마스터 되어요!** 🌟
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-async def split_long_message(text: str, max_length: int = 4096) -> list:
-    """긴 메시지를 여러 부분으로 나누기"""
-    if len(text) <= max_length:
-        return [text]
-    
-    # 메시지를 여러 부분으로 나누기
-    parts = []
-    current_part = ""
-    
-    # 줄 단위로 나누기
-    lines = text.split('\n')
-    
-    for line in lines:
-        # 현재 부분 + 새 줄이 최대 길이를 초과하는지 확인
-        if len(current_part) + len(line) + 1 > max_length:
-            if current_part:
-                parts.append(current_part.strip())
-                current_part = line
-            else:
-                # 한 줄이 너무 긴 경우 강제로 자르기
-                while len(line) > max_length:
-                    parts.append(line[:max_length])
-                    line = line[max_length:]
-                current_part = line
-        else:
-            if current_part:
-                current_part += "\n" + line
-            else:
-                current_part = line
-    
-    # 마지막 부분 추가
-    if current_part:
-        parts.append(current_part.strip())
-    
-    return parts
+💬 **바로 시작**: 위 버튼을 클릭하거나
+✨ **자유 대화**: 그냥 메시지를 보내세요!
+📚 **도움말**: `/help`로 전체 기능 확인
 
-# --- 핵심 기능: 명령어 핸들러 ---
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    chat_id = user.id
-    user_data = get_user(chat_id)
+🔥 **목표**: 100일 안에 러시아어 마스터! 🔥
+    """
     
-    await update.message.reply_text(
-        f"🎉 안녕하세요, {user.first_name}님!\n"
-        "저는 당신만의 러시아어 학습 트레이너, **'루샤(Rusya)'**입니다.\n\n"
-        "단순 번역기를 넘어, 실제 상황처럼 대화하고, 작문을 교정하며, 꾸준히 학습할 수 있도록 제가 함께할게요!\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**🚀 핵심 학습 기능**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🎮 **퀘스트 학습** - 실전 상황에서 러시아어 회화 배우기\n"
-        "   • `/quest` - 카페, 레스토랑 등 스토리 시뮬레이션 시작\n"
-        "   • `/action [러시아어]` - 퀘스트에서 행동하기\n"
-        "   • `/hint` - 퀘스트 힌트 받기\n"
-        "   • `/trans` - 퀘스트 번역 도움\n\n"
-        "✍️ **AI 작문 교정** - 문법과 표현을 정확하게 수정\n"
-        "   • `/write [러시아어 문장]` - 상세 피드백과 교정\n\n"
-        "🌍 **스마트 번역 시스템**\n"
-        "   • `/trs [언어] [텍스트]` - 빠른 간단 번역\n"
-        "   • `/trl [언어] [텍스트]` - 문법 분석 + 상세 설명\n"
-        "   📝 지원언어: korean(kr), russian(ru), english(en)\n\n"
-        "🎵 **음성 학습 도구**\n"
-        "   • `/ls [텍스트]` - 고품질 음성 변환 (발음 연습)\n"
-        "   • `/trls [언어] [텍스트]` - 번역 + 음성을 한번에\n\n"
-        "📊 **학습 관리 & 통계**\n"
-        "   • `/my_progress` - 레벨, 경험치, 상세 학습 통계\n"
-        "   • 자동 레벨업 시스템 & 성취도 추적\n\n"
-        "📅 **일일 학습 구독** (매일 오전 7시 발송)\n"
-        "   • `/subscribe_daily` - 매일 새로운 단어 30개 + 회화 20개\n"
-        "   • `/unsubscribe_daily` - 구독 해제\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**🔧 시스템 & 도움말**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "• `/help` - 전체 상세 사용법 안내\n"
-        "• `/model_status` - AI 모델 상태 확인\n"
-        "• **명령어 없이도 대화 가능** - 그냥 메시지 보내기만 해도 AI가 응답!\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**💡 추천 학습 순서**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "1️⃣ `/quest` - 실전 회화로 시작\n"
-        "2️⃣ `/write` - 작문으로 문법 익히기\n"
-        "3️⃣ `/trl` - 상세 번역으로 이해 깊히기\n"
-        "4️⃣ `/ls` - 음성으로 발음 연습\n"
-        "5️⃣ `/subscribe_daily` - 꾸준한 학습 습관 만들기\n\n"
-        "🎯 **목표**: 매일 조금씩, 꾸준히 러시아어 마스터하기!\n\n"
-        f"현재 레벨: **{user_data['stats']['level']}** | "
-        f"총 경험치: **{user_data['stats']['total_exp']}**\n\n"
-        "지금 바로 `/quest`로 시작하거나 `/help`로 상세 안내를 확인해보세요! 🚀"
-    )
+    # 팁 메시지 전송
+    await update.message.reply_text(tip_message)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # 전체 명령어 도움말을 카테고리별로 구성
@@ -2511,6 +1555,7 @@ async def send_daily_learning(bot: Bot):
         return
     
     import random
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     
     # 30개 단어 랜덤 선택
     vocabulary = random.sample(database['vocabulary'], min(30, len(database['vocabulary'])))
@@ -2524,43 +1569,204 @@ async def send_daily_learning(bot: Bot):
         # 기존 파일이 없으면 단어로 대체
         conversations = random.sample(database['vocabulary'], min(20, len(database['vocabulary'])))
     
-    # 단어 메시지 생성
-    words_message = "📚 **오늘의 러시아어 단어 (30개)**\n\n"
-    for i, word in enumerate(vocabulary, 1):
-        words_message += f"{i}. **{word['russian']}** [{word['pronunciation']}] - {word['korean']}\n"
-    
-    # 회화 메시지 생성
-    conversations_message = "💬 **오늘의 러시아어 회화 (20개)**\n\n"
-    for i, conv in enumerate(conversations, 1):
-        conversations_message += f"{i}. **{conv['russian']}**\n"
-        conversations_message += f"   [{conv['pronunciation']}]\n"
-        conversations_message += f"   💡 {conv['korean']}\n\n"
-    
-    # 긴 메시지 나누기
-    words_parts = await split_long_message(words_message)
-    conversations_parts = await split_long_message(conversations_message)
+    current_date = datetime.now(MSK)
+    date_str = current_date.strftime('%Y년 %m월 %d일')
+    weekday = ['월', '화', '수', '목', '금', '토', '일'][current_date.weekday()]
     
     for user_id, user_data in users.items():
         if user_data.get('subscribed_daily', False):
             try:
-                # 헤더 메시지
-                header = f"☀️ **오늘의 러시아어 학습** (모스크바 기준 {datetime.now(MSK).strftime('%m월 %d일')})\n\n"
-                await bot.send_message(chat_id=user_id, text=header)
+                # 🎨 초현대적 헤더 메시지
+                header = f"""
+🌟 **러시아어 마스터 일일 학습** 🌟
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 **{date_str} ({weekday}요일)**
+🕐 **모스크바 시간**: {current_date.strftime('%H:%M')}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ **오늘도 함께 러시아어 정복하러 가요!** ✨
+
+🎯 **학습 목표**: 단어 30개 + 회화 20개 마스터
+🚀 **예상 학습 시간**: 15-20분
+🏆 **완료 시 보상**: +50 EXP + 성취 배지!
+                """
                 
-                # 단어 메시지 전송
+                # 인터랙티브 키보드 추가
+                keyboard = [
+                    [InlineKeyboardButton("🎵 모든 단어 듣기", callback_data="listen_all_words"),
+                     InlineKeyboardButton("🗣️ 모든 회화 듣기", callback_data="listen_all_conversations")],
+                    [InlineKeyboardButton("🎮 게임으로 학습", callback_data="daily_game"),
+                     InlineKeyboardButton("📊 학습 진도 확인", callback_data="check_progress")],
+                    [InlineKeyboardButton("❤️ 좋아요", callback_data="like_daily"),
+                     InlineKeyboardButton("🔄 새로고침", callback_data="refresh_daily")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await bot.send_message(chat_id=user_id, text=header, reply_markup=reply_markup)
+                await asyncio.sleep(1)
+                
+                # 📚 단어 섹션 - 더 세련된 디자인
+                words_message = f"""
+📚 **오늘의 핵심 단어 컬렉션** (30개) 📚
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **암기 팁**: 각 단어를 3번씩 소리내어 읽어보세요!
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+                
+                # 단어들을 5개씩 그룹으로 나누어 카드 형태로 표시
+                for i in range(0, len(vocabulary), 5):
+                    group = vocabulary[i:i+5]
+                    words_message += f"📋 **그룹 {i//5 + 1}**\n"
+                    
+                    for j, word in enumerate(group, 1):
+                        emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][j-1]
+                        words_message += f"{emoji} **{word['russian']}** `[{word['pronunciation']}]`\n"
+                        words_message += f"   💡 {word['korean']}\n\n"
+                    
+                    words_message += "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                # 단어 섹션 전송
+                words_parts = await split_long_message(words_message)
                 for part in words_parts:
                     await bot.send_message(chat_id=user_id, text=part)
-                    await asyncio.sleep(0.5)  # 메시지 간 간격
+                    await asyncio.sleep(0.8)
                 
-                # 회화 메시지 전송
+                # 🎵 단어 음성 생성 및 전송
+                logger.info(f"단어 음성 파일 생성 시작 - 사용자: {user_id}")
+                
+                # 처음 10개 단어의 음성만 생성 (너무 많으면 부담)
+                sample_words = vocabulary[:10]
+                words_audio_text = ""
+                for word in sample_words:
+                    words_audio_text += f"{word['russian']}. "
+                
+                words_audio = await convert_text_to_speech(words_audio_text, "ru")
+                if words_audio:
+                    words_audio_buffer = io.BytesIO(words_audio)
+                    words_audio_buffer.name = f"daily_words_{current_date.strftime('%Y%m%d')}.mp3"
+                    
+                    await bot.send_audio(
+                        chat_id=user_id,
+                        audio=words_audio_buffer,
+                        title=f"📚 오늘의 단어 발음 ({date_str})",
+                        performer="루샤 봇",
+                        caption="🎵 **처음 10개 단어 발음**\n\n💡 **학습법**: 음성을 들으며 따라 읽어보세요!"
+                    )
+                    logger.info(f"단어 음성 파일 전송 완료 - 사용자: {user_id}")
+                
+                await asyncio.sleep(1)
+                
+                # 💬 회화 섹션 - 더 인터랙티브한 디자인
+                conversations_message = f"""
+💬 **실전 회화 마스터 클래스** (20개) 💬
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 **연습 방법**: 각 문장을 상황에 맞게 연기해보세요!
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+                
+                # 회화를 시나리오별로 그룹화
+                conversation_groups = [
+                    {"title": "🏠 일상 대화", "conversations": conversations[:5]},
+                    {"title": "🛍️ 쇼핑 & 레스토랑", "conversations": conversations[5:10]},
+                    {"title": "🚇 교통 & 여행", "conversations": conversations[10:15]},
+                    {"title": "💼 비즈니스 & 격식", "conversations": conversations[15:20]}
+                ]
+                
+                for group in conversation_groups:
+                    conversations_message += f"━━ {group['title']} ━━\n\n"
+                    
+                    for i, conv in enumerate(group['conversations'], 1):
+                        star_emoji = ['⭐', '🌟', '✨', '💫', '🌠'][i-1] if i <= 5 else '⭐'
+                        conversations_message += f"{star_emoji} **{conv['russian']}**\n"
+                        conversations_message += f"   🔤 `[{conv['pronunciation']}]`\n"
+                        conversations_message += f"   🇰🇷 {conv['korean']}\n\n"
+                    
+                    conversations_message += "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                # 회화 섹션 전송
+                conversations_parts = await split_long_message(conversations_message)
                 for part in conversations_parts:
                     await bot.send_message(chat_id=user_id, text=part)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.8)
                 
+                # 🎵 회화 음성 생성 및 전송
+                logger.info(f"회화 음성 파일 생성 시작 - 사용자: {user_id}")
+                
+                # 처음 10개 회화의 음성 생성
+                sample_conversations = conversations[:10]
+                conversations_audio_text = ""
+                for conv in sample_conversations:
+                    conversations_audio_text += f"{conv['russian']}. "
+                
+                conversations_audio = await convert_text_to_speech(conversations_audio_text, "ru")
+                if conversations_audio:
+                    conversations_audio_buffer = io.BytesIO(conversations_audio)
+                    conversations_audio_buffer.name = f"daily_conversations_{current_date.strftime('%Y%m%d')}.mp3"
+                    
+                    await bot.send_audio(
+                        chat_id=user_id,
+                        audio=conversations_audio_buffer,
+                        title=f"💬 오늘의 회화 발음 ({date_str})",
+                        performer="루샤 봇",
+                        caption="🎵 **처음 10개 회화 발음**\n\n🎭 **학습법**: 음성을 들으며 상황을 상상해보세요!"
+                    )
+                    logger.info(f"회화 음성 파일 전송 완료 - 사용자: {user_id}")
+                
+                # 🏆 마무리 메시지와 동기부여
+                completion_message = f"""
+🎉 **오늘의 학습 완료!** 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+✅ **학습 성과**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 **새로운 단어**: 30개 마스터!
+💬 **실전 회화**: 20개 습득!
+🎵 **발음 연습**: 20개 문장 완료!
+⭐ **획득 경험치**: +50 EXP
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 **다음 단계 추천**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎮 `/games` - 오늘 배운 단어로 게임하기
+✍️ `/write` - 새로운 문장 만들어보기
+🏆 `/my_progress` - 학습 진도 확인하기
+🎯 `/ai_tutor` - 개인 맞춤 분석받기
+
+💡 **오늘의 격려**: 
+꾸준함이 실력을 만듭니다! 매일 조금씩이라도
+러시아어와 친해지는 당신이 정말 대단해요! 🌟
+
+🔥 **내일도 함께 러시아어 마스터하러 가요!** 🔥
+                """
+                
+                # 완료 메시지용 키보드
+                final_keyboard = [
+                    [InlineKeyboardButton("🎮 오늘 배운 단어로 게임하기", callback_data="daily_word_game")],
+                    [InlineKeyboardButton("✍️ 문장 만들기 연습", callback_data="practice_writing")],
+                    [InlineKeyboardButton("📊 학습 진도 확인", callback_data="check_my_progress")],
+                    [InlineKeyboardButton("❤️ 만족해요!", callback_data="satisfied_daily")]
+                ]
+                final_reply_markup = InlineKeyboardMarkup(final_keyboard)
+                
+                await bot.send_message(chat_id=user_id, text=completion_message, reply_markup=final_reply_markup)
+                
+                # 사용자 데이터 업데이트
                 user_data['stats']['daily_words_received'] += 1
-                logger.info(f"Sent daily learning to {user_id}")
+                user_data['stats']['total_exp'] += 50  # 일일 학습 완료 보상
+                
+                logger.info(f"Enhanced daily learning sent to {user_id} with audio")
+                
             except Exception as e:
-                logger.error(f"Failed to send message to {user_id}: {e}")
+                logger.error(f"Failed to send enhanced daily learning to {user_id}: {e}")
+                import traceback
+                logger.error(f"Detailed error: {traceback.format_exc()}")
     
     save_user_data(users)
 
@@ -2587,6 +1793,7 @@ async def main() -> None:
 
     application = Application.builder().token(BOT_TOKEN).build()
     
+    # 🎨 혁신적인 UI와 모든 명령어 핸들러 등록
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("subscribe_daily", subscribe_daily_command))
@@ -2602,13 +1809,46 @@ async def main() -> None:
     application.add_handler(CommandHandler("model_status", model_status_command))
     application.add_handler(CommandHandler("hint", hint_command))
     application.add_handler(CommandHandler("trans", translation_command))
+    
+    # 🎮 세계급 게임화 학습 시스템
+    application.add_handler(CommandHandler("games", games_command))
+    application.add_handler(CommandHandler("game_word_match", word_match_game_command))
+    application.add_handler(CommandHandler("game_sentence_builder", sentence_builder_game_command))
+    application.add_handler(CommandHandler("game_speed_quiz", speed_quiz_command))
+    application.add_handler(CommandHandler("game_pronunciation", pronunciation_challenge_command))
+    application.add_handler(CommandHandler("achievements", achievements_command))
+    
+    # 🧠 AI 기반 개인화 학습 시스템
+    application.add_handler(CommandHandler("ai_tutor", ai_tutor_command))
+    application.add_handler(CommandHandler("personalized_lesson", personalized_lesson_command))
+    application.add_handler(CommandHandler("learning_analytics", learning_analytics_command))
+    
+    # 🎯 스마트 학습 도구
+    application.add_handler(CommandHandler("weak_area_practice", weak_area_practice_command))
+    application.add_handler(CommandHandler("adaptive_quiz", adaptive_quiz_command))
+    application.add_handler(CommandHandler("srs_review", srs_review_command))
+    application.add_handler(CommandHandler("vocabulary_builder", vocabulary_builder_command))
+    application.add_handler(CommandHandler("pronunciation_score", pronunciation_score_command))
+    
+    # 🌟 소셜 기능 (미래 확장)
+    application.add_handler(CommandHandler("leaderboard", leaderboard_command))
+    application.add_handler(CommandHandler("challenge_friend", challenge_friend_command))
+    application.add_handler(CommandHandler("study_buddy", study_buddy_command))
+    
+    # 🎨 초현대적 인라인 키보드 콜백 핸들러
+    from telegram.ext import CallbackQueryHandler
+    application.add_handler(CallbackQueryHandler(button_callback))
+    
+    # 💬 일반 메시지 처리 (Gemini AI와 대화)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
+    # 📅 일일 학습 스케줄러 (매일 오전 7시 + 음성 기능 포함)
     scheduler = AsyncIOScheduler(timezone=MSK)
     scheduler.add_job(send_daily_learning, 'cron', hour=7, minute=0, args=[application.bot])
     scheduler.add_job(send_daily_learning, 'cron', hour=12, minute=0, args=[application.bot])
     
-    logger.info("🤖 튜터 봇 '루샤'가 활동을 시작합니다...")
+    logger.info("🚀 세계 최고 수준 러시아어 AI 튜터 봇 '루샤' 시작!")
+    logger.info("✨ 새로운 기능: 초현대적 UI + 음성 일일 학습 + 인터랙티브 버튼")
     
     try:
         scheduler.start()
@@ -3754,6 +2994,242 @@ async def study_buddy_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     """
     
     await update.message.reply_text(buddy_text)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎨 초현대적 인라인 키보드 콜백 핸들러
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """인라인 키보드 버튼 클릭 처리"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    callback_data = query.data
+    
+    # 🎯 AI 튜터 관련 콜백
+    if callback_data == "ai_tutor":
+        await ai_tutor_command(update, context)
+    
+    elif callback_data == "personalized_lesson":
+        await personalized_lesson_command(update, context)
+    
+    elif callback_data == "learning_analytics":
+        await learning_analytics_command(update, context)
+    
+    # 🎮 게임 관련 콜백
+    elif callback_data == "games_menu":
+        await games_command(update, context)
+    
+    elif callback_data == "daily_word_game":
+        await word_match_game_command(update, context)
+    
+    elif callback_data == "practice_writing":
+        message_text = """
+✍️ **문장 만들기 연습** ✍️
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **연습 방법**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. **오늘 배운 단어**를 사용해서
+2. **러시아어 문장**을 만들어보세요
+3. `/write [문장]` 명령어로 전송
+4. **AI가 교정**해드립니다!
+
+💡 **예시**: 
+`/write Я изучаю русский язык каждый день`
+
+✨ **팁**: 짧고 간단한 문장부터 시작하세요!
+        """
+        await query.edit_message_text(message_text)
+    
+    # 📚 학습 관련 콜백
+    elif callback_data == "quest_start":
+        await quest_command(update, context)
+    
+    elif callback_data == "vocab_basic":
+        await vocabulary_builder_command(update, context)
+    
+    elif callback_data == "adaptive_quiz":
+        await adaptive_quiz_command(update, context)
+    
+    elif callback_data == "weak_area_practice":
+        await weak_area_practice_command(update, context)
+    
+    elif callback_data == "pronunciation_master":
+        await pronunciation_score_command(update, context)
+    
+    # 📊 분석 관련 콜백
+    elif callback_data == "my_progress":
+        await my_progress_command(update, context)
+    
+    elif callback_data == "check_my_progress":
+        await my_progress_command(update, context)
+    
+    elif callback_data == "advanced_analytics":
+        await learning_analytics_command(update, context)
+    
+    # 📅 일일 학습 관련 콜백
+    elif callback_data == "daily_learning":
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        
+        users = load_user_data()
+        user_data = users.get(str(user_id), {})
+        subscribed = user_data.get('subscribed_daily', False)
+        
+        if subscribed:
+            message_text = """
+📅 **일일 학습 설정** 📅
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+✅ **현재 상태**: 구독 중
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🕰️ **전송 시간**: 매일 오전 7시 (MSK)
+📚 **내용**: 단어 30개 + 회화 20개
+🎵 **음성 포함**: 고품질 발음 파일
+🏆 **보상**: 일일 +50 EXP
+
+💡 **새로운 기능**: 이제 음성 파일도 함께 전송됩니다!
+            """
+            
+            keyboard = [
+                [InlineKeyboardButton("🔕 구독 해제", callback_data="unsubscribe_daily")],
+                [InlineKeyboardButton("🔄 지금 받아보기", callback_data="get_daily_now")],
+                [InlineKeyboardButton("⚙️ 설정 변경", callback_data="daily_settings")]
+            ]
+        else:
+            message_text = """
+📅 **일일 학습 설정** 📅
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+❌ **현재 상태**: 구독 안 함
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ **구독하면 매일 받는 것**:
+• 📚 엄선된 러시아어 단어 30개
+• 💬 실전 회화 문장 20개  
+• 🎵 전문 발음 음성 파일
+• 🎯 개인화된 학습 가이드
+• 🏆 일일 50 EXP 보상
+
+🕰️ **전송 시간**: 매일 오전 7시 (모스크바 시간)
+            """
+            
+            keyboard = [
+                [InlineKeyboardButton("📅 구독 시작", callback_data="subscribe_daily")],
+                [InlineKeyboardButton("🔄 샘플 보기", callback_data="get_daily_sample")],
+                [InlineKeyboardButton("❓ 자세히 알아보기", callback_data="daily_info")]
+            ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(message_text, reply_markup=reply_markup)
+    
+    elif callback_data == "subscribe_daily":
+        await subscribe_daily_command(update, context)
+    
+    elif callback_data == "unsubscribe_daily":
+        await unsubscribe_daily_command(update, context)
+    
+    elif callback_data == "get_daily_now":
+        # 즉시 일일 학습 콘텐츠 전송
+        bot = context.bot
+        await send_daily_learning(bot)
+        await query.edit_message_text("📚 **일일 학습 콘텐츠를 전송했습니다!**\n\n🎵 음성 파일도 함께 받으셨어요!")
+    
+    # 🌍 번역 관련 콜백
+    elif callback_data == "translation_menu":
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        
+        message_text = """
+🌍 **번역 & 음성 메뉴** 🌍
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 **어떤 기능을 사용하시겠어요?**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ **간단 번역**: `/trs [언어] [텍스트]`
+📚 **상세 번역**: `/trl [언어] [텍스트]`  
+🎵 **번역+음성**: `/trls [언어] [텍스트]`
+🔊 **음성 변환**: `/ls [텍스트]`
+
+💡 **지원 언어**: korean, russian, english, chinese, japanese
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("⚡ 간단 번역 예제", callback_data="translation_example_simple"),
+             InlineKeyboardButton("📚 상세 번역 예제", callback_data="translation_example_detailed")],
+            [InlineKeyboardButton("🎵 음성 번역 예제", callback_data="translation_example_audio"),
+             InlineKeyboardButton("🔊 음성 변환 예제", callback_data="audio_example")],
+            [InlineKeyboardButton("🔙 메인 메뉴로", callback_data="back_to_main")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(message_text, reply_markup=reply_markup)
+    
+    # 📚 도움말 관련 콜백
+    elif callback_data == "help_guide":
+        await help_command(update, context)
+    
+    # 🎵 일일 학습 음성 관련 콜백
+    elif callback_data in ["listen_all_words", "listen_all_conversations"]:
+        await query.edit_message_text("🎵 **음성 파일을 준비 중입니다...**\n\n⏳ 잠시만 기다려주세요!")
+    
+    elif callback_data == "like_daily":
+        await query.edit_message_text("❤️ **감사합니다!**\n\n🌟 여러분의 피드백이 저희에게 큰 힘이 됩니다!")
+    
+    elif callback_data == "satisfied_daily":
+        await query.edit_message_text("🎉 **완벽해요!**\n\n🚀 내일도 더 좋은 콘텐츠로 만나요!")
+    
+    # 🔙 뒤로가기 콜백
+    elif callback_data == "back_to_main":
+        await start_command(update, context)
+    
+    # 기타 알림 콜백들
+    elif callback_data in ["daily_game", "check_progress", "refresh_daily"]:
+        await query.edit_message_text("🚧 **기능 준비 중입니다!**\n\n⭐ 곧 업데이트될 예정이에요!")
+    
+    else:
+        await query.edit_message_text("❓ **알 수 없는 명령입니다.**\n\n🔄 `/start`로 다시 시작해주세요!")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎨 향상된 UI 컴포넌트들
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def create_progress_bar(percentage: float, length: int = 10) -> str:
+    """진행률 바 생성 (현대적 스타일)"""
+    filled = int(percentage * length / 100)
+    empty = length - filled
+    
+    bar = "🟩" * filled + "⬜" * empty
+    return f"{bar} {percentage:.1f}%"
+
+async def create_level_badge(level: int) -> str:
+    """레벨 배지 생성"""
+    if level <= 10:
+        return "🔰"
+    elif level <= 20:
+        return "🥉"
+    elif level <= 30:
+        return "🥈" 
+    elif level <= 50:
+        return "🥇"
+    elif level <= 70:
+        return "💎"
+    elif level <= 90:
+        return "👑"
+    else:
+        return "🌟"
+
+async def format_experience(exp: int) -> str:
+    """경험치 포맷팅"""
+    if exp < 1000:
+        return f"{exp}"
+    elif exp < 1000000:
+        return f"{exp/1000:.1f}K"
+    else:
+        return f"{exp/1000000:.1f}M"
 
 if __name__ == '__main__':
     asyncio.run(main()) 
