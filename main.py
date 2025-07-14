@@ -50,8 +50,6 @@ def main():
     # 애플리케이션 생성
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # 콜백 핸들러 제거됨 - 이제 명령어만 사용
-    
     # === 기본 명령어 핸들러들 ===
     application.add_handler(CommandHandler("start", SimpleBot.start_command))
     application.add_handler(CommandHandler("help", SimpleBot.help_command))
@@ -61,6 +59,33 @@ def main():
     application.add_handler(CommandHandler("action", SimpleBot.action_command))
     application.add_handler(CommandHandler("write", SimpleBot.write_command))
     application.add_handler(CommandHandler("my_progress", SimpleBot.my_progress_command))
+    
+    # === 🌟 혁신적인 게임화된 학습 시스템 ===
+    application.add_handler(CommandHandler("games", SimpleBot.games_command))
+    application.add_handler(CommandHandler("game_word_match", SimpleBot.word_match_game_command))
+    application.add_handler(CommandHandler("game_sentence_builder", SimpleBot.sentence_builder_game_command))
+    application.add_handler(CommandHandler("game_speed_quiz", SimpleBot.speed_quiz_command))
+    application.add_handler(CommandHandler("game_pronunciation", SimpleBot.pronunciation_challenge_command))
+    
+    # === 🏆 성취 시스템 ===
+    application.add_handler(CommandHandler("achievements", SimpleBot.achievements_command))
+    
+    # === 🧠 개인화된 AI 튜터 시스템 ===
+    application.add_handler(CommandHandler("ai_tutor", SimpleBot.ai_tutor_command))
+    application.add_handler(CommandHandler("personalized_lesson", SimpleBot.personalized_lesson_command))
+    application.add_handler(CommandHandler("learning_analytics", SimpleBot.learning_analytics_command))
+    application.add_handler(CommandHandler("weak_area_practice", SimpleBot.weak_area_practice_command))
+    application.add_handler(CommandHandler("adaptive_quiz", SimpleBot.adaptive_quiz_command))
+    
+    # === 🎯 스마트 학습 시스템 ===
+    application.add_handler(CommandHandler("srs_review", SimpleBot.srs_review_command))
+    application.add_handler(CommandHandler("vocabulary_builder", SimpleBot.vocabulary_builder_command))
+    application.add_handler(CommandHandler("pronunciation_score", SimpleBot.pronunciation_score_command))
+    
+    # === 👥 소셜 학습 기능 ===
+    application.add_handler(CommandHandler("leaderboard", SimpleBot.leaderboard_command))
+    application.add_handler(CommandHandler("challenge_friend", SimpleBot.challenge_friend_command))
+    application.add_handler(CommandHandler("study_buddy", SimpleBot.study_buddy_command))
     
     # === 구독 관련 핸들러들 ===
     application.add_handler(CommandHandler("subscribe_daily", SimpleBot.subscribe_daily_command))
@@ -82,18 +107,31 @@ def main():
     # === AI 대화 핸들러 (명령어가 아닌 일반 메시지) ===
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, SimpleBot.handle_message))
     
-    logger.info("🤖 러시아어 학습 봇 '루샤(Rusya)'가 시작되었습니다!")
-    logger.info("🚀 모든 기능이 무제한으로 제공됩니다!")
-    logger.info("📚 업그레이드된 명령어들:")
-    logger.info("   • /start - 명령어 안내")
-    logger.info("   • /help - 카테고리별 상세 도움말")
-    logger.info("   • /write - AI 작문 교정 (상세 피드백)")
-    logger.info("   • /trs, /trl - 간단/상세 번역")
-    logger.info("   • /ls, /trls - 음성 변환")
-    logger.info("   • /quest - 업그레이드된 퀘스트")
-    logger.info("   • /hint, /trans - 퀘스트 도움말")
-    logger.info("   • /my_progress - 상세 학습 통계")
-    logger.info("✅ 명령어 방식으로 단순화 완료!")
+    logger.info("🤖 🌟 **지구 최고의 러시아어 학습 봇 '루샤(Rusya)' 업그레이드 완료!** 🌟")
+    logger.info("🚀 모든 혁신적인 기능이 무제한으로 제공됩니다!")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("🎮 **새로운 게임화된 학습 시스템:**")
+    logger.info("   • /games - 게임 메뉴")
+    logger.info("   • /game_word_match - 단어 매칭 게임")
+    logger.info("   • /game_sentence_builder - 문장 조립 게임")
+    logger.info("   • /game_speed_quiz - 스피드 퀴즈")
+    logger.info("   • /game_pronunciation - 발음 챌린지")
+    logger.info("🏆 **성취 시스템:**")
+    logger.info("   • /achievements - 성취 확인")
+    logger.info("🧠 **개인화된 AI 튜터:**")
+    logger.info("   • /ai_tutor - AI 튜터 상담")
+    logger.info("   • /personalized_lesson - 맞춤형 수업")
+    logger.info("   • /learning_analytics - 학습 분석")
+    logger.info("🎯 **스마트 학습 도구:**")
+    logger.info("   • /srs_review - 간격 반복 학습")
+    logger.info("   • /vocabulary_builder - 어휘 확장")
+    logger.info("   • /pronunciation_score - 발음 평가")
+    logger.info("👥 **소셜 학습:**")
+    logger.info("   • /leaderboard - 리더보드")
+    logger.info("   • /challenge_friend - 친구 도전")
+    logger.info("   • /study_buddy - 스터디 버디")
+    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━")
+    logger.info("✅ 지구 최고 수준의 언어학습 봇으로 업그레이드 완료!")
     
     # 봇 실행 (최강 충돌 방지 설정)
     logger.info("🔥 충돌 방지 폴링 시작!")
