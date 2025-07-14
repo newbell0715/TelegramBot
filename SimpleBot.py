@@ -1555,19 +1555,18 @@ async def send_daily_learning(bot: Bot):
         return
     
     import random
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     
-    # 30개 단어 랜덤 선택
-    vocabulary = random.sample(database['vocabulary'], min(30, len(database['vocabulary'])))
+    # 15개 단어와 10개 회화로 조정 (개별 음성 때문에)
+    vocabulary = random.sample(database['vocabulary'], min(15, len(database['vocabulary'])))
     
     # 회화 문장은 기존 데이터베이스에서 로드
     try:
         with open('russian_learning_database.json', 'r', encoding='utf-8') as f:
             old_database = json.load(f)
-        conversations = random.sample(old_database['conversations'], min(20, len(old_database['conversations'])))
+        conversations = random.sample(old_database['conversations'], min(10, len(old_database['conversations'])))
     except FileNotFoundError:
         # 기존 파일이 없으면 단어로 대체
-        conversations = random.sample(database['vocabulary'], min(20, len(database['vocabulary'])))
+        conversations = random.sample(database['vocabulary'], min(10, len(database['vocabulary'])))
     
     current_date = datetime.now(MSK)
     date_str = current_date.strftime('%Y년 %m월 %d일')
@@ -1576,7 +1575,7 @@ async def send_daily_learning(bot: Bot):
     for user_id, user_data in users.items():
         if user_data.get('subscribed_daily', False):
             try:
-                # 🎨 초현대적 헤더 메시지
+                # 🎨 새로운 헤더 메시지 (인라인 키보드 없음)
                 header = f"""
 🌟 **러시아어 마스터 일일 학습** 🌟
 
@@ -1587,186 +1586,185 @@ async def send_daily_learning(bot: Bot):
 
 ✨ **오늘도 함께 러시아어 정복하러 가요!** ✨
 
-🎯 **학습 목표**: 단어 30개 + 회화 20개 마스터
+🎯 **학습 목표**: 단어 15개 + 회화 10개 마스터
 🚀 **예상 학습 시간**: 15-20분
 🏆 **완료 시 보상**: +50 EXP + 성취 배지!
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📱 **학습 옵션**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+`/1` - 🎮 게임으로 학습하기
+`/2` - 📊 학습 진도 확인하기  
+`/3` - 🏆 성취 배지 보기
+`/4` - 🤖 AI 튜터 분석받기
+
+💡 **팁**: 각 단어와 회화마다 개별 음성이 전송됩니다!
                 """
                 
-                # 인터랙티브 키보드 추가
-                keyboard = [
-                    [InlineKeyboardButton("🎵 모든 단어 듣기", callback_data="listen_all_words"),
-                     InlineKeyboardButton("🗣️ 모든 회화 듣기", callback_data="listen_all_conversations")],
-                    [InlineKeyboardButton("🎮 게임으로 학습", callback_data="daily_game"),
-                     InlineKeyboardButton("📊 학습 진도 확인", callback_data="check_progress")],
-                    [InlineKeyboardButton("❤️ 좋아요", callback_data="like_daily"),
-                     InlineKeyboardButton("🔄 새로고침", callback_data="refresh_daily")]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                
-                await bot.send_message(chat_id=user_id, text=header, reply_markup=reply_markup)
+                await bot.send_message(chat_id=user_id, text=header)
                 await asyncio.sleep(1)
                 
-                # 📚 단어 섹션 - 더 세련된 디자인
-                words_message = f"""
-📚 **오늘의 핵심 단어 컬렉션** (30개) 📚
+                # 📚 단어 섹션 - 개별 음성과 함께
+                words_header = f"""
+📚 **오늘의 핵심 단어 컬렉션** (15개) 📚
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 **암기 팁**: 각 단어를 3번씩 소리내어 읽어보세요!
+🎯 **학습법**: 음성을 들으며 3번씩 따라 읽어보세요!
 ━━━━━━━━━━━━━━━━━━━━━━━━
+                """
+                
+                await bot.send_message(chat_id=user_id, text=words_header)
+                await asyncio.sleep(0.5)
+                
+                # 각 단어마다 개별 처리
+                for i, word in enumerate(vocabulary, 1):
+                    # 단어 정보 메시지
+                    word_message = f"""
+{i}️⃣ **{word['russian']}** `[{word['pronunciation']}]`
+💡 **뜻**: {word['korean']}
 
-"""
-                
-                # 단어들을 5개씩 그룹으로 나누어 카드 형태로 표시
-                for i in range(0, len(vocabulary), 5):
-                    group = vocabulary[i:i+5]
-                    words_message += f"📋 **그룹 {i//5 + 1}**\n"
+━━━━━━━━━━━━━━━━━━━━━━━━
+                    """
                     
-                    for j, word in enumerate(group, 1):
-                        emoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'][j-1]
-                        words_message += f"{emoji} **{word['russian']}** `[{word['pronunciation']}]`\n"
-                        words_message += f"   💡 {word['korean']}\n\n"
+                    await bot.send_message(chat_id=user_id, text=word_message)
                     
-                    words_message += "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                
-                # 단어 섹션 전송
-                words_parts = await split_long_message(words_message)
-                for part in words_parts:
-                    await bot.send_message(chat_id=user_id, text=part)
-                    await asyncio.sleep(0.8)
-                
-                # 🎵 단어 음성 생성 및 전송
-                logger.info(f"단어 음성 파일 생성 시작 - 사용자: {user_id}")
-                
-                # 처음 10개 단어의 음성만 생성 (너무 많으면 부담)
-                sample_words = vocabulary[:10]
-                words_audio_text = ""
-                for word in sample_words:
-                    words_audio_text += f"{word['russian']}. "
-                
-                words_audio = await convert_text_to_speech(words_audio_text, "ru")
-                if words_audio:
-                    words_audio_buffer = io.BytesIO(words_audio)
-                    words_audio_buffer.name = f"daily_words_{current_date.strftime('%Y%m%d')}.mp3"
+                    # 개별 음성 파일 생성 및 전송
+                    try:
+                        word_audio = await convert_text_to_speech(word['russian'], "ru")
+                        if word_audio:
+                            word_audio_buffer = io.BytesIO(word_audio)
+                            word_audio_buffer.name = f"word_{i}_{word['russian']}.mp3"
+                            
+                            await bot.send_audio(
+                                chat_id=user_id,
+                                audio=word_audio_buffer,
+                                title=f"🎵 {word['russian']} 발음",
+                                performer="루샤 봇",
+                                caption=f"🔊 **{word['russian']}** 발음\n💡 따라 읽어보세요: `{word['pronunciation']}`"
+                            )
+                            
+                            logger.info(f"개별 단어 음성 전송 완료: {word['russian']} - 사용자: {user_id}")
+                    except Exception as e:
+                        logger.error(f"단어 음성 생성 실패: {word['russian']} - {e}")
                     
-                    await bot.send_audio(
-                        chat_id=user_id,
-                        audio=words_audio_buffer,
-                        title=f"📚 오늘의 단어 발음 ({date_str})",
-                        performer="루샤 봇",
-                        caption="🎵 **처음 10개 단어 발음**\n\n💡 **학습법**: 음성을 들으며 따라 읽어보세요!"
-                    )
-                    logger.info(f"단어 음성 파일 전송 완료 - 사용자: {user_id}")
+                    await asyncio.sleep(0.8)  # 각 단어 간 간격
                 
+                # 단어 섹션 완료 메시지
+                words_complete = """
+✅ **단어 학습 완료!** 📚
+
+🎉 15개 단어와 발음을 모두 익혔습니다!
+이제 실전 회화로 넘어가볼까요? 💬
+                """
+                await bot.send_message(chat_id=user_id, text=words_complete)
                 await asyncio.sleep(1)
                 
-                # 💬 회화 섹션 - 더 인터랙티브한 디자인
-                conversations_message = f"""
-💬 **실전 회화 마스터 클래스** (20개) 💬
+                # 💬 회화 섹션 - 개별 음성과 함께
+                conversations_header = f"""
+💬 **실전 회화 마스터 클래스** (10개) 💬
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-🎭 **연습 방법**: 각 문장을 상황에 맞게 연기해보세요!
+🎭 **연습법**: 음성을 들으며 상황을 상상해보세요!
 ━━━━━━━━━━━━━━━━━━━━━━━━
+                """
+                
+                await bot.send_message(chat_id=user_id, text=conversations_header)
+                await asyncio.sleep(0.5)
+                
+                # 각 회화마다 개별 처리
+                for i, conv in enumerate(conversations, 1):
+                    # 회화 카테고리 결정
+                    if i <= 3:
+                        category = "🏠 일상 대화"
+                    elif i <= 6:
+                        category = "🛍️ 쇼핑 & 서비스"
+                    elif i <= 8:
+                        category = "🚇 교통 & 여행"
+                    else:
+                        category = "💼 비즈니스 & 격식"
+                    
+                    # 회화 정보 메시지
+                    conv_message = f"""
+{i}️⃣ **{category}**
 
-"""
-                
-                # 회화를 시나리오별로 그룹화
-                conversation_groups = [
-                    {"title": "🏠 일상 대화", "conversations": conversations[:5]},
-                    {"title": "🛍️ 쇼핑 & 레스토랑", "conversations": conversations[5:10]},
-                    {"title": "🚇 교통 & 여행", "conversations": conversations[10:15]},
-                    {"title": "💼 비즈니스 & 격식", "conversations": conversations[15:20]}
-                ]
-                
-                for group in conversation_groups:
-                    conversations_message += f"━━ {group['title']} ━━\n\n"
+🗣️ **{conv['russian']}**
+🔤 `[{conv['pronunciation']}]`
+🇰🇷 **{conv['korean']}**
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+                    """
                     
-                    for i, conv in enumerate(group['conversations'], 1):
-                        star_emoji = ['⭐', '🌟', '✨', '💫', '🌠'][i-1] if i <= 5 else '⭐'
-                        conversations_message += f"{star_emoji} **{conv['russian']}**\n"
-                        conversations_message += f"   🔤 `[{conv['pronunciation']}]`\n"
-                        conversations_message += f"   🇰🇷 {conv['korean']}\n\n"
+                    await bot.send_message(chat_id=user_id, text=conv_message)
                     
-                    conversations_message += "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                
-                # 회화 섹션 전송
-                conversations_parts = await split_long_message(conversations_message)
-                for part in conversations_parts:
-                    await bot.send_message(chat_id=user_id, text=part)
-                    await asyncio.sleep(0.8)
-                
-                # 🎵 회화 음성 생성 및 전송
-                logger.info(f"회화 음성 파일 생성 시작 - 사용자: {user_id}")
-                
-                # 처음 10개 회화의 음성 생성
-                sample_conversations = conversations[:10]
-                conversations_audio_text = ""
-                for conv in sample_conversations:
-                    conversations_audio_text += f"{conv['russian']}. "
-                
-                conversations_audio = await convert_text_to_speech(conversations_audio_text, "ru")
-                if conversations_audio:
-                    conversations_audio_buffer = io.BytesIO(conversations_audio)
-                    conversations_audio_buffer.name = f"daily_conversations_{current_date.strftime('%Y%m%d')}.mp3"
+                    # 개별 음성 파일 생성 및 전송
+                    try:
+                        conv_audio = await convert_text_to_speech(conv['russian'], "ru")
+                        if conv_audio:
+                            conv_audio_buffer = io.BytesIO(conv_audio)
+                            conv_audio_buffer.name = f"conversation_{i}_{current_date.strftime('%Y%m%d')}.mp3"
+                            
+                            await bot.send_audio(
+                                chat_id=user_id,
+                                audio=conv_audio_buffer,
+                                title=f"🎭 회화 {i}번 발음",
+                                performer="루샤 봇",
+                                caption=f"🗣️ **{category}**\n💬 {conv['korean']}\n\n🎯 상황을 상상하며 따라 해보세요!"
+                            )
+                            
+                            logger.info(f"개별 회화 음성 전송 완료: {i}번 - 사용자: {user_id}")
+                    except Exception as e:
+                        logger.error(f"회화 음성 생성 실패: {i}번 - {e}")
                     
-                    await bot.send_audio(
-                        chat_id=user_id,
-                        audio=conversations_audio_buffer,
-                        title=f"💬 오늘의 회화 발음 ({date_str})",
-                        performer="루샤 봇",
-                        caption="🎵 **처음 10개 회화 발음**\n\n🎭 **학습법**: 음성을 들으며 상황을 상상해보세요!"
-                    )
-                    logger.info(f"회화 음성 파일 전송 완료 - 사용자: {user_id}")
+                    await asyncio.sleep(1.0)  # 각 회화 간 간격
                 
-                # 🏆 마무리 메시지와 동기부여
+                # 🏆 최종 완료 메시지
                 completion_message = f"""
 🎉 **오늘의 학습 완료!** 🎉
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-✅ **학습 성과**
+✅ **완벽한 성과!**
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-📚 **새로운 단어**: 30개 마스터!
-💬 **실전 회화**: 20개 습득!
-🎵 **발음 연습**: 20개 문장 완료!
-⭐ **획득 경험치**: +50 EXP
+📚 **새로운 단어**: 15개 + 개별 발음 ✓
+💬 **실전 회화**: 10개 + 개별 발음 ✓  
+🎵 **음성 연습**: 25개 파일 완료 ✓
+⭐ **획득 경험치**: +50 EXP 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 **다음 단계 추천**
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-🎮 `/games` - 오늘 배운 단어로 게임하기
-✍️ `/write` - 새로운 문장 만들어보기
-🏆 `/my_progress` - 학습 진도 확인하기
-🎯 `/ai_tutor` - 개인 맞춤 분석받기
+`/1` - 🎮 오늘 배운 단어로 게임하기
+`/2` - ✍️ 새로운 문장 만들어보기
+`/3` - 🏆 학습 진도 확인하기
+`/4` - 🎯 AI 튜터 개인 분석받기
 
-💡 **오늘의 격려**: 
+━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **오늘의 격려**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
 꾸준함이 실력을 만듭니다! 매일 조금씩이라도
 러시아어와 친해지는 당신이 정말 대단해요! 🌟
+
+각 단어와 회화의 개별 발음을 들으며
+더 정확한 발음을 익힐 수 있었을 거예요! 
 
 🔥 **내일도 함께 러시아어 마스터하러 가요!** 🔥
                 """
                 
-                # 완료 메시지용 키보드
-                final_keyboard = [
-                    [InlineKeyboardButton("🎮 오늘 배운 단어로 게임하기", callback_data="daily_word_game")],
-                    [InlineKeyboardButton("✍️ 문장 만들기 연습", callback_data="practice_writing")],
-                    [InlineKeyboardButton("📊 학습 진도 확인", callback_data="check_my_progress")],
-                    [InlineKeyboardButton("❤️ 만족해요!", callback_data="satisfied_daily")]
-                ]
-                final_reply_markup = InlineKeyboardMarkup(final_keyboard)
-                
-                await bot.send_message(chat_id=user_id, text=completion_message, reply_markup=final_reply_markup)
+                await bot.send_message(chat_id=user_id, text=completion_message)
                 
                 # 사용자 데이터 업데이트
                 user_data['stats']['daily_words_received'] += 1
                 user_data['stats']['total_exp'] += 50  # 일일 학습 완료 보상
                 
-                logger.info(f"Enhanced daily learning sent to {user_id} with audio")
+                logger.info(f"새로운 개별 음성 일일 학습 전송 완료 - 사용자: {user_id}")
                 
             except Exception as e:
-                logger.error(f"Failed to send enhanced daily learning to {user_id}: {e}")
+                logger.error(f"개별 음성 일일 학습 전송 실패 - 사용자: {user_id}: {e}")
                 import traceback
-                logger.error(f"Detailed error: {traceback.format_exc()}")
+                logger.error(f"상세 오류: {traceback.format_exc()}")
     
     save_user_data(users)
 
@@ -1835,9 +1833,17 @@ async def main() -> None:
     application.add_handler(CommandHandler("challenge_friend", challenge_friend_command))
     application.add_handler(CommandHandler("study_buddy", study_buddy_command))
     
-    # 🎨 초현대적 인라인 키보드 콜백 핸들러
-    from telegram.ext import CallbackQueryHandler
-    application.add_handler(CallbackQueryHandler(button_callback))
+    # 🔢 번호 메뉴 시스템 (인라인 키보드 대체)
+    application.add_handler(CommandHandler("1", menu_1_command))
+    application.add_handler(CommandHandler("2", menu_2_command))
+    application.add_handler(CommandHandler("3", menu_3_command))
+    application.add_handler(CommandHandler("4", menu_4_command))
+    application.add_handler(CommandHandler("5", menu_5_command))
+    application.add_handler(CommandHandler("6", menu_6_command))
+    application.add_handler(CommandHandler("7", menu_7_command))
+    application.add_handler(CommandHandler("8", menu_8_command))
+    application.add_handler(CommandHandler("9", menu_9_command))
+    application.add_handler(CommandHandler("0", menu_0_command))
     
     # 💬 일반 메시지 처리 (Gemini AI와 대화)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -2189,7 +2195,7 @@ async def achievements_command(update: Update, context: ContextTypes.DEFAULT_TYP
 **📊 성취 통계**
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-🏅 획득한 성취: {len(user_achievements)}/{len(ACHIEVEMENTS)}
+🏅 획득한 성취: {len(user_achievements)}/{len(ACHIEVEMENTS)}개
 🌟 성취 경험치: {total_exp_from_achievements} EXP
 📈 완성도: {len(user_achievements)/len(ACHIEVEMENTS)*100:.1f}%
 
@@ -3230,6 +3236,116 @@ async def format_experience(exp: int) -> str:
         return f"{exp/1000:.1f}K"
     else:
         return f"{exp/1000000:.1f}M"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔢 번호 메뉴 시스템 핸들러 (인라인 키보드 대체)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+async def menu_1_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 1: 게임으로 학습하기"""
+    await games_command(update, context)
+
+async def menu_2_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 2: 학습 진도 확인하기"""
+    await my_progress_command(update, context)
+
+async def menu_3_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 3: 성취 배지 보기"""
+    await achievements_command(update, context)
+
+async def menu_4_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 4: AI 튜터 분석받기"""
+    await ai_tutor_command(update, context)
+
+# 추가 번호 메뉴들
+async def menu_5_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 5: 퀘스트 시작하기"""
+    await quest_command(update, context)
+
+async def menu_6_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 6: 작문 연습하기"""
+    message_text = """
+✍️ **작문 연습 가이드** ✍️
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **연습 방법**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. `/write [러시아어 문장]` 형태로 입력
+2. AI가 문법과 표현을 교정해드려요
+3. 상세한 설명과 개선점을 알려드려요
+
+💡 **예시**:
+`/write Я изучаю русский язык каждый день`
+
+✨ **팁**: 오늘 배운 단어를 사용해보세요!
+    """
+    await update.message.reply_text(message_text)
+
+async def menu_7_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 7: 개인화된 수업"""
+    await personalized_lesson_command(update, context)
+
+async def menu_8_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 8: 발음 점수 확인"""
+    await pronunciation_score_command(update, context)
+
+async def menu_9_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 9: 번역 도구"""
+    message_text = """
+🌍 **번역 도구 가이드** 🌍
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 **번역 명령어**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚡ `/trs [언어] [텍스트]` - 간단 번역
+📚 `/trl [언어] [텍스트]` - 상세 번역 (문법 분석)
+🎵 `/trls [언어] [텍스트]` - 번역 + 음성
+🔊 `/ls [텍스트]` - 음성 변환만
+
+💡 **지원 언어**: korean, russian, english, chinese, japanese
+
+✨ **예시**:
+`/trs russian 안녕하세요`
+`/trls korean Здравствуйте`
+    """
+    await update.message.reply_text(message_text)
+
+async def menu_0_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """메뉴 0: 전체 메뉴 보기"""
+    user = update.effective_user
+    menu_text = f"""
+📱 **전체 번호 메뉴** 📱
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **{user.first_name}님을 위한 학습 메뉴**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**🎮 학습 & 게임**
+`/1` - 🎮 게임으로 학습하기
+`/2` - 📊 학습 진도 확인하기
+`/3` - 🏆 성취 배지 보기
+`/4` - 🤖 AI 튜터 분석받기
+`/5` - 🏰 퀘스트 시작하기
+
+**✍️ 실력 향상**
+`/6` - ✍️ 작문 연습하기
+`/7` - 📚 개인화된 수업
+`/8` - 🎤 발음 점수 확인
+`/9` - 🌍 번역 도구 사용
+
+**📚 기본 명령어**
+`/start` - 🌟 메인 화면
+`/help` - ❓ 도움말
+`/subscribe_daily` - 📅 일일 학습 구독
+`/my_progress` - 📈 상세 진도
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **팁**: 번호만 입력하면 더 편리해요!
+🔥 **목표**: 매일 꾸준히 러시아어 마스터!
+    """
+    await update.message.reply_text(menu_text)
 
 if __name__ == '__main__':
     asyncio.run(main()) 
