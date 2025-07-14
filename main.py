@@ -238,8 +238,13 @@ def main():
     logger.info("   • /my_progress - 상세 학습 통계")
     logger.info("🔘 콜백 쿼리 핸들러 등록 완료!")
     
-    # 봇 실행
-    application.run_polling(drop_pending_updates=True)
+    # 봇 실행 (충돌 방지 설정)
+    logger.info("🚀 봇 폴링 시작 - 충돌 방지 모드")
+    application.run_polling(
+        drop_pending_updates=True,  # 시작 시 모든 pending updates 삭제
+        close_loop=False,           # 루프 자동 종료 비활성화
+        stop_signals=None           # 신호 처리 비활성화 (Railway 환경용)
+    )
 
 if __name__ == '__main__':
     main() 
