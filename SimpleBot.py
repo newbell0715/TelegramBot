@@ -5,8 +5,8 @@ import io
 from datetime import datetime, timedelta
 import pytz
 from gtts import gTTS
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+from telegram import Update, Bot
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
@@ -311,17 +311,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_id = user.id
     get_user(chat_id)
     
-    # 인라인 키보드 버튼 생성
-    keyboard = [
-        [InlineKeyboardButton("🏆 퀘스트 시작", callback_data="start_quest")],
-        [InlineKeyboardButton("✍️ 작문 교정 도움말", callback_data="help_write"), 
-         InlineKeyboardButton("🌍 번역 도움말", callback_data="help_translate")],
-        [InlineKeyboardButton("🎵 음성 변환 도움말", callback_data="help_tts"), 
-         InlineKeyboardButton("📊 나의 학습 진도", callback_data="my_progress")],
-        [InlineKeyboardButton("📚 전체 도움말", callback_data="full_help")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await update.message.reply_text(
         f"🎉 안녕하세요, {user.first_name}님!\n"
         "저는 당신만의 러시아어 학습 트레이너, '루샤(Rusya)'입니다.\n\n"
@@ -332,8 +321,15 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "🌍 **스마트 번역** - 간단/상세 번역으로 완벽 이해\n"
         "🎵 **음성 변환** - 발음 연습과 청취 향상\n"
         "📅 **일일 학습** - 매일 새로운 단어와 회화\n\n"
-        "아래 버튼을 클릭하여 원하는 기능을 바로 시작해보세요!",
-        reply_markup=reply_markup
+        "**📝 바로 사용할 수 있는 명령어들:**\n"
+        "• `/quest` - 퀘스트 시작하기\n"
+        "• `/write [러시아어 문장]` - 작문 교정받기\n"
+        "• `/trs [언어] [텍스트]` - 간단 번역\n"
+        "• `/ls [텍스트]` - 음성 변환\n"
+        "• `/my_progress` - 학습 진도 확인\n"
+        "• `/help` - 전체 도움말 보기\n"
+        "• `/subscribe_daily` - 일일 학습 구독\n\n"
+        "지금 바로 명령어를 입력해서 시작해보세요! 🚀"
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -493,22 +489,14 @@ async def quest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         quest = QUEST_DATA[quest_id]
         stage_data = quest['stages'][1]
         
-        # 인라인 키보드 추가
-        keyboard = [
-            [InlineKeyboardButton("💡 힌트 보기", callback_data="quest_hint")],
-            [InlineKeyboardButton("📖 번역 보기", callback_data="quest_translation")],
-            [InlineKeyboardButton("🔄 퀘스트 다시 시작", callback_data="restart_quest")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await update.message.reply_text(
             f"**📜 새로운 퀘스트: {quest['title']}**\n\n"
             f"🎬 **상황 설명:**\n{stage_data['description']}\n\n"
             f"🗣️ **점원의 말:**\n`{stage_data['bot_message']}`\n\n"
             f"➡️ **당신의 임무:**\n{stage_data['action_prompt']}\n\n"
             f"💬 **사용법:** `/action [할 말]`을 사용해 대답해주세요.\n"
-            f"📝 **예시:** `/action Здравствуйте, кофе пожалуйста`",
-            reply_markup=reply_markup
+            f"📝 **예시:** `/action Здравствуйте, кофе пожалуйста`\n\n"
+            f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
         )
     else:
         quest_id = quest_state['current_quest']
@@ -525,21 +513,13 @@ async def quest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         stage_data = quest['stages'][stage]
         
-        # 인라인 키보드 추가
-        keyboard = [
-            [InlineKeyboardButton("💡 힌트 보기", callback_data="quest_hint")],
-            [InlineKeyboardButton("📖 번역 보기", callback_data="quest_translation")],
-            [InlineKeyboardButton("🔄 퀘스트 처음부터", callback_data="restart_quest")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await update.message.reply_text(
             f"**📜 퀘스트 진행 중: {quest['title']} (단계: {stage}/{len(quest['stages'])})**\n\n"
             f"🎬 **현재 상황:**\n{stage_data['description']}\n\n"
             f"🗣️ **상대방의 말:**\n`{stage_data['bot_message']}`\n\n"
             f"➡️ **당신의 임무:**\n{stage_data['action_prompt']}\n\n"
-            f"💬 **사용법:** `/action [할 말]`을 사용해 대답해주세요.",
-            reply_markup=reply_markup
+            f"💬 **사용법:** `/action [할 말]`을 사용해 대답해주세요.\n\n"
+            f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
         )
 
 async def action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -597,20 +577,13 @@ async def action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
             next_stage_data = quest['stages'][next_stage]
             
-            # 인라인 키보드 추가
-            keyboard = [
-                [InlineKeyboardButton("💡 힌트 보기", callback_data="quest_hint")],
-                [InlineKeyboardButton("📖 번역 보기", callback_data="quest_translation")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
             await update.message.reply_text(
                 f"**✅ 단계 {stage} 성공!**\n\n"
                 f"🎬 **다음 상황:**\n{next_stage_data['description']}\n\n"
                 f"🗣️ **상대방의 말:**\n`{next_stage_data['bot_message']}`\n\n"
                 f"➡️ **당신의 임무:**\n{next_stage_data['action_prompt']}\n\n"
-                f"💬 계속해서 `/action [할 말]`로 대답해주세요!",
-                reply_markup=reply_markup
+                f"💬 계속해서 `/action [할 말]`로 대답해주세요!\n\n"
+                f"💡 **도움이 필요하면:** `/hint` 또는 `/trans`를 입력하세요!"
             )
     else:
         # 힌트 제공
@@ -756,16 +729,7 @@ async def my_progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 언어 실력 향상의 비결은 꾸준함입니다. 화이팅! 🚀
     """
     
-    # 인라인 키보드 추가
-    keyboard = [
-        [InlineKeyboardButton("🏆 퀘스트 도전", callback_data="start_quest")],
-        [InlineKeyboardButton("✍️ 작문 교정", callback_data="help_write"), 
-         InlineKeyboardButton("🌍 번역하기", callback_data="help_translate")],
-        [InlineKeyboardButton("📅 일일 학습 구독", callback_data="subscribe_daily")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(progress_report, reply_markup=reply_markup)
+    await update.message.reply_text(progress_report)
 
 # 기존 번역 명령어들 (사용법 향상)
 async def translate_simple_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -837,6 +801,7 @@ async def translate_simple_command(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text(full_response)
         
         # 통계 업데이트
+        chat_id = update.effective_chat.id
         users = load_user_data()
         users[str(chat_id)]['stats']['translations_made'] += 1
         users[str(chat_id)]['stats']['total_exp'] += 5  # 번역 시 경험치 추가
@@ -999,6 +964,13 @@ async def listening_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 title=f"{lang_name} 음성: {input_text[:50]}...",
                 caption=f"{lang_flag} {lang_name} 음성\n📝 텍스트: {input_text}\n🎤 엔진: Google TTS"
             )
+            
+            # 통계 업데이트
+            chat_id = update.effective_chat.id
+            users = load_user_data()
+            users[str(chat_id)]['stats']['tts_generated'] += 1
+            users[str(chat_id)]['stats']['total_exp'] += 3  # TTS 시 경험치 추가
+            save_user_data(users)
         else:
             await processing_message.edit_text("음성 변환 실패. 다시 시도해주세요. 😅")
             
@@ -1143,6 +1115,67 @@ async def model_status_command(update: Update, context: ContextTypes.DEFAULT_TYP
     
     await update.message.reply_text(status_message)
 
+async def hint_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """퀘스트 힌트 제공"""
+    chat_id = update.effective_chat.id
+    user = get_user(chat_id)
+    quest_state = user['quest_state']
+    
+    if quest_state['current_quest'] is None:
+        await update.message.reply_text(
+            "❌ **진행 중인 퀘스트가 없습니다**\n\n"
+            "먼저 `/quest`로 새 퀘스트를 시작하세요!"
+        )
+        return
+    
+    quest_id = quest_state['current_quest']
+    stage = quest_state['stage']
+    quest = QUEST_DATA[quest_id]
+    stage_data = quest['stages'][stage]
+    
+    keywords_hint = "`, `".join(stage_data['keywords'][:3])
+    
+    await update.message.reply_text(
+        f"💡 **퀘스트 힌트**\n\n"
+        f"🎯 **현재 임무:** {stage_data['action_prompt']}\n\n"
+        f"🔑 **사용할 키워드:** `{keywords_hint}` 등\n\n"
+        f"📝 **예시 문장들:**\n"
+        f"• `Здравствуйте` (안녕하세요)\n"
+        f"• `Кофе, пожалуйста` (커피 주세요)\n"
+        f"• `Спасибо` (감사합니다)\n\n"
+        f"💬 `/action [문장]`으로 대답해보세요!"
+    )
+
+async def translation_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """퀘스트 번역 제공"""
+    chat_id = update.effective_chat.id
+    user = get_user(chat_id)
+    quest_state = user['quest_state']
+    
+    if quest_state['current_quest'] is None:
+        await update.message.reply_text(
+            "❌ **진행 중인 퀘스트가 없습니다**\n\n"
+            "먼저 `/quest`로 새 퀘스트를 시작하세요!"
+        )
+        return
+    
+    quest_id = quest_state['current_quest']
+    stage = quest_state['stage']
+    quest = QUEST_DATA[quest_id]
+    stage_data = quest['stages'][stage]
+    
+    await update.message.reply_text(
+        f"📖 **퀘스트 번역 도움**\n\n"
+        f"🗣️ **상대방 말:** `{stage_data['bot_message']}`\n\n"
+        f"🎯 **당신이 해야 할 말 (한국어):** {stage_data['action_prompt']}\n\n"
+        f"📝 **러시아어로 이렇게 말해보세요:**\n"
+        f"• `Здравствуйте` - 안녕하세요\n"
+        f"• `Кофе, пожалуйста` - 커피 주세요\n"
+        f"• `Американо` - 아메리카노\n"
+        f"• `Спасибо` - 감사합니다\n\n"
+        f"💬 `/action [선택한 러시아어]`로 진행하세요!"
+    )
+
 async def send_daily_learning(bot: Bot):
     users = load_user_data()
     
@@ -1244,6 +1277,8 @@ async def main() -> None:
     application.add_handler(CommandHandler("ls", listening_command))
     application.add_handler(CommandHandler("trls", translate_listen_command))
     application.add_handler(CommandHandler("model_status", model_status_command))
+    application.add_handler(CommandHandler("힌트", hint_command))
+    application.add_handler(CommandHandler("번역", translation_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     scheduler = AsyncIOScheduler(timezone=MSK)
