@@ -29,212 +29,132 @@ async def callback_query_handler(update, context):
     
     data = query.data
     chat_id = query.message.chat_id
+    user = query.from_user
     
-    # 퀴즈 관련 콜백
-    if data.startswith('quiz_'):
-        from handlers.quiz import start_quiz, show_question, handle_quiz_answer, show_quiz_history, show_leaderboard
-        
-        if data == 'quiz_menu':
-            # 퀴즈 메뉴 다시 표시
-            from config.settings import QUIZ_CATEGORIES
-            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-            
-            keyboard = []
-            for category_id, category_data in QUIZ_CATEGORIES.items():
-                keyboard.append([InlineKeyboardButton(
-                    f"{category_data['emoji']} {category_data['name']}", 
-                    callback_data=f"quiz_{category_id}"
-                )])
-            
-            keyboard.append([InlineKeyboardButton("📊 내 퀴즈 기록", callback_data="quiz_history")])
-            keyboard.append([InlineKeyboardButton("🏅 리더보드", callback_data="leaderboard")])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await query.edit_message_text(
-                "🧠 **퀴즈 카테고리를 선택해주세요:**",
-                reply_markup=reply_markup
-            )
-            
-        elif data in ['quiz_vocabulary', 'quiz_grammar', 'quiz_pronunciation']:
-            category = data.replace('quiz_', '')
-            await start_quiz(update, context, category)
-            
-        elif data.startswith('quiz_answer_'):
-            answer_index = int(data.split('_')[-1])
-            await handle_quiz_answer(update, context, answer_index)
-            
-        elif data == 'quiz_next':
-            await show_question(update, context)
-            
-        elif data == 'quiz_quit':
-            await query.edit_message_text("❌ **퀴즈를 종료했습니다.**\n\n언제든 `/quiz`로 다시 시작하세요!")
-            
-        elif data == 'quiz_history':
-            await show_quiz_history(update, context)
-            
-        elif data == 'leaderboard':
-            await show_leaderboard(update, context)
-    
-    # 기본 기능 콜백
-    elif data == 'start_quest':
-        # SimpleBot.py의 quest_command 가져오기
+    # SimpleBot 콜백 처리
+    if data == "start_quest":
+        # 퀘스트 시작
         import SimpleBot
-        
-        # 가짜 업데이트 객체 생성
-        class FakeUpdate:
-            def __init__(self, chat_id, user):
-                self.effective_chat = type('obj', (object,), {'id': chat_id})()
-                self.effective_user = user
-                self.message = type('obj', (object,), {
-                    'reply_text': query.edit_message_text,
-                    'chat_id': chat_id
-                })()
-        
-        fake_update = FakeUpdate(chat_id, query.from_user)
-        await SimpleBot.quest_command(fake_update, context)
-        
-    elif data == 'help_write':
-        help_text = """
-✍️ **AI 작문 교정 완전 가이드**
-
-📝 **기본 사용법:**
-`/write [러시아어 문장]`
-
-📚 **상세 예시:**
-• `/write Я хочу изучать русский язык`
-  → "러시아어를 배우고 싶어요" 교정
-
-• `/write Вчера я пошёл в магазин`
-  → "어제 가게에 갔어요" 문법 검사
-
-• `/write Мне нравится читать книги`
-  → "책 읽는 것을 좋아해요" 표현 개선
-
-🎯 **AI가 제공하는 서비스:**
-✅ **문법 오류 검출 및 수정**
-✅ **자연스러운 표현 제안**
-✅ **상세한 설명과 학습 포인트**
-✅ **동기부여 피드백과 칭찬**
-✅ **추가 학습 팁 제공**
-
-💡 **학습 효과를 높이는 팁:**
-🔹 틀려도 괜찮으니 자유롭게 작성하세요
-🔹 일상 대화문을 만들어 실용성 높이기
-🔹 교정 결과를 `/ls`로 음성 확인하기
-🔹 비슷한 문장으로 반복 연습하기
-
-⭐ **경험치:** 작문 교정 1회당 +10 EXP 획득!
-        """
-        await query.edit_message_text(help_text)
-        
-    elif data == 'help_translate':
-        help_text = """
-🌍 **스마트 번역 시스템 완전 가이드**
-
-⚡ **간단 번역:** `/trs [언어] [텍스트]`
-📝 **사용 예시:**
-• `/trs russian 안녕하세요` → Здравствуйте
-• `/trs korean Привет` → 안녕하세요
-• `/trs en 감사합니다` → Thank you
-
-📚 **상세 번역:** `/trl [언어] [텍스트]`
-📝 **사용 예시:**
-• `/trl russian 좋은 아침이에요`
-  → 번역 + 문법 분석 + 단어 설명
-
-🎵 **번역+음성:** `/trls [언어] [텍스트]`
-📝 **사용 예시:**
-• `/trls russian 감사합니다`
-  → 번역 결과를 음성으로 바로 들을 수 있음
-
-🌍 **지원하는 언어:**
-• **한국어:** `korean`, `kr`
-• **러시아어:** `russian`, `ru`  
-• **영어:** `english`, `en`
-
-💡 **사용 팁:**
-🔹 간단한 확인은 `/trs` 사용
-🔹 문법 학습이 목적이면 `/trl` 사용
-🔹 발음 연습이 필요하면 `/trls` 사용
-🔹 복잡한 문장은 단어별로 나누어 번역
-
-⭐ **경험치:** 번역 1회당 +5 EXP 획득!
-        """
-        await query.edit_message_text(help_text)
-        
-    elif data == 'help_tts':
-        help_text = """
-🎵 **음성 변환 (TTS) 완전 가이드**
-
-🔊 **기본 사용법:**
-`/ls [텍스트]`
-
-📚 **다양한 예시:**
-• `/ls 안녕하세요` (한국어 음성)
-• `/ls Привет, как дела?` (러시아어 음성)
-• `/ls Доброе утро!` (러시아어 음성)
-• `/ls 좋은 하루 되세요` (한국어 음성)
-
-🎯 **고급 기능:**
-✅ **언어 자동 감지** - 한국어/러시아어 자동 인식
-✅ **고품질 Google TTS** - 자연스러운 발음
-✅ **최적화된 속도** - 학습에 적합한 속도
-✅ **즉시 재생** - 텔레그램에서 바로 재생
-
-🚀 **학습 활용법:**
-🔹 **발음 연습:** 번역 결과를 음성으로 들어보기
-🔹 **청취 훈련:** 러시아어 문장을 반복 청취
-🔹 **억양 학습:** 자연스러운 억양 체득
-🔹 **확신 검증:** 내가 읽는 발음과 비교
-
-💡 **효과적인 사용 순서:**
-1️⃣ `/trs`로 번역하기
-2️⃣ `/ls`로 발음 듣기  
-3️⃣ 따라 말하며 연습하기
-4️⃣ `/write`로 문장 만들어보기
-
-⭐ **경험치:** 음성 변환 1회당 +3 EXP 획득!
-        """
-        await query.edit_message_text(help_text)
-        
-    elif data == 'my_progress':
-        import SimpleBot
-        
-        class FakeUpdate:
-            def __init__(self, chat_id, user):
-                self.effective_chat = type('obj', (object,), {'id': chat_id})()
-                self.effective_user = user
-                self.message = type('obj', (object,), {
-                    'reply_text': query.edit_message_text,
-                })()
-        
-        fake_update = FakeUpdate(chat_id, query.from_user)
-        await SimpleBot.my_progress_command(fake_update, context)
-        
-    elif data == 'subscribe_daily':
-        import SimpleBot
-        
-        class FakeUpdate:
-            def __init__(self, chat_id):
-                self.effective_chat = type('obj', (object,), {'id': chat_id})()
-                self.message = type('obj', (object,), {
-                    'reply_text': query.edit_message_text,
-                })()
-        
-        fake_update = FakeUpdate(chat_id)
-        await SimpleBot.subscribe_daily_command(fake_update, context)
-        
-    elif data == 'full_help':
-        import SimpleBot
-        
         class FakeUpdate:
             def __init__(self):
-                self.message = type('obj', (object,), {
-                    'reply_text': query.edit_message_text,
-                })()
+                self.effective_chat = type('obj', (object,), {'id': chat_id})
+                self.effective_user = user
+                self.message = type('obj', (object,), {'reply_text': query.message.reply_text})
+        
+        fake_update = FakeUpdate()
+        await SimpleBot.quest_command(fake_update, context)
+    
+    elif data == "help_write":
+        await query.message.reply_text(
+            "**✍️ AI 작문 교정 사용법**\n\n"
+            "📝 **명령어:** `/write [교정받고 싶은 러시아어 문장]`\n\n"
+            "📚 **예시:**\n"
+            "• `/write Я хочу изучать русский язык`\n"
+            "• `/write Вчера я пошёл в магазин`\n"
+            "• `/write Мне нравится читать книги`\n\n"
+            "🎯 **제공 기능:**\n"
+            "✅ 문법 오류 수정\n"
+            "✅ 자연스러운 표현 제안\n"
+            "✅ 상세한 설명과 이유\n"
+            "✅ 칭찬과 동기부여\n\n"
+            "💡 **팁:** 틀려도 괜찮으니 자유롭게 문장을 만들어보세요!"
+        )
+    
+    elif data == "help_translate":
+        await query.message.reply_text(
+            "**🌍 번역 시스템 사용법**\n\n"
+            "**⚡ 간단 번역**\n"
+            "• `/trs [언어] [텍스트]` - 빠르고 정확한 번역\n"
+            "• 예시: `/trs russian 안녕하세요`\n\n"
+            "**📚 상세 번역**\n"
+            "• `/trl [언어] [텍스트]` - 문법 분석 + 단어 설명\n"
+            "• 예시: `/trl russian 좋은 아침이에요`\n\n"
+            "**🎵 번역+음성**\n"
+            "• `/trls [언어] [텍스트]` - 번역과 음성을 한번에\n"
+            "• 예시: `/trls russian 안녕하세요`\n\n"
+            "🌍 **지원언어:** korean(kr), russian(ru), english(en)"
+        )
+    
+    elif data == "help_tts":
+        await query.message.reply_text(
+            "**🎵 음성 변환 사용법**\n\n"
+            "🔊 **명령어:** `/ls [텍스트]`\n\n"
+            "📚 **예시:**\n"
+            "• `/ls 안녕하세요` (한국어)\n"
+            "• `/ls Привет, как дела?` (러시아어)\n"
+            "• `/ls 좋은 아침이에요` (한국어)\n\n"
+            "🎯 **특징:**\n"
+            "✅ 한국어/러시아어 자동 인식\n"
+            "✅ 고품질 Google TTS 엔진\n"
+            "✅ 완전 무료 서비스\n\n"
+            "💡 **발음 연습 팁:** 음성을 들으며 따라 읽어보세요!"
+        )
+    
+    elif data == "my_progress":
+        # 진도 확인
+        import SimpleBot
+        class FakeUpdate:
+            def __init__(self):
+                self.effective_chat = type('obj', (object,), {'id': chat_id})
+                self.effective_user = user
+                self.message = type('obj', (object,), {'reply_text': query.message.reply_text})
+        
+        fake_update = FakeUpdate()
+        await SimpleBot.my_progress_command(fake_update, context)
+    
+    elif data == "full_help":
+        # 전체 도움말
+        import SimpleBot
+        class FakeUpdate:
+            def __init__(self):
+                self.effective_chat = type('obj', (object,), {'id': chat_id})
+                self.effective_user = user
+                self.message = type('obj', (object,), {'reply_text': query.message.reply_text})
         
         fake_update = FakeUpdate()
         await SimpleBot.help_command(fake_update, context)
+    
+    elif data == "subscribe_daily":
+        # 일일 학습 구독
+        import SimpleBot
+        class FakeUpdate:
+            def __init__(self):
+                self.effective_chat = type('obj', (object,), {'id': chat_id})
+                self.effective_user = user
+                self.message = type('obj', (object,), {'reply_text': query.message.reply_text})
+        
+        fake_update = FakeUpdate()
+        await SimpleBot.subscribe_daily_command(fake_update, context)
+    
+    # 퀘스트 관련 콜백
+    elif data == "quest_hint":
+        await query.message.reply_text(
+            "💡 **퀘스트 힌트**\n\n"
+            "• 상황에 맞는 러시아어 인사말을 사용해보세요\n"
+            "• 'Здравствуйте' (공손한 인사)\n"
+            "• 'Привет' (친근한 인사)\n"
+            "• 주문할 때는 'пожалуйста'를 붙이면 더 정중해요\n\n"
+            "🔄 `/action [러시아어 문장]`으로 다시 시도해보세요!"
+        )
+    
+    elif data == "quest_translation":
+        await query.message.reply_text(
+            "📖 **주요 표현 번역**\n\n"
+            "• **Здравствуйте** - 안녕하세요 (정중)\n"
+            "• **Привет** - 안녕 (친근)\n"
+            "• **кофе** - 커피\n"
+            "• **пожалуйста** - 부탁합니다/주세요\n"
+            "• **спасибо** - 감사합니다\n"
+            "• **карта/картой** - 카드/카드로\n\n"
+            "💡 이 표현들을 조합해서 문장을 만들어보세요!"
+        )
+    
+    elif data == "restart_quest":
+        await query.message.reply_text(
+            "🔄 **퀘스트 다시 시작**\n\n"
+            "퀘스트를 처음부터 다시 시작하려면 `/quest` 명령어를 입력하세요!\n"
+            "새로운 마음가짐으로 러시아어 회화에 도전해보세요! 💪"
+        )
 
 def main():
     """메인 실행 함수"""
