@@ -552,8 +552,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_id = user.id
     user_data = get_user(chat_id)
     
-    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-    
     # 사용자 레벨에 따른 맞춤 환영 메시지
     level = user_data['stats']['level']
     if level <= 10:
@@ -585,43 +583,28 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 **오늘 뭘 해볼까요?**
 ━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 **번호를 입력해주세요:**
+
+**🎮 학습 & 게임**
+`/1` - 🎮 게임으로 학습하기
+`/2` - 📊 학습 진도 확인하기  
+`/3` - 🏆 성취 배지 보기
+`/4` - 🤖 AI 튜터 분석받기
+`/5` - 🏰 퀘스트 시작하기
+
+**✍️ 실력 향상**
+`/6` - ✍️ 작문 연습하기
+`/7` - 📚 개인화된 수업
+`/8` - 🎤 발음 점수 확인
+`/9` - 🌍 번역 도구 사용
+
+**📚 기타**
+`/0` - 📱 전체 메뉴 다시 보기
+`/help` - ❓ 전체 도움말
     """
     
-    # 레벨별 맞춤 추천 버튼
-    if level <= 10:
-        primary_buttons = [
-            [InlineKeyboardButton("🎯 개인 맞춤 분석 시작", callback_data="ai_tutor"),
-             InlineKeyboardButton("🎮 재미있는 게임 체험", callback_data="games_menu")],
-            [InlineKeyboardButton("🏰 스토리 퀘스트 시작", callback_data="quest_start"),
-             InlineKeyboardButton("📚 기초 단어 학습", callback_data="vocab_basic")]
-        ]
-    elif level <= 30:
-        primary_buttons = [
-            [InlineKeyboardButton("🧠 맞춤형 AI 수업", callback_data="personalized_lesson"),
-             InlineKeyboardButton("✍️ 작문 실력 향상", callback_data="writing_practice")],
-            [InlineKeyboardButton("🎯 적응형 퀴즈", callback_data="adaptive_quiz"),
-             InlineKeyboardButton("📈 학습 패턴 분석", callback_data="learning_analytics")]
-        ]
-    else:
-        primary_buttons = [
-            [InlineKeyboardButton("🎯 약점 분야 보강", callback_data="weak_area_practice"),
-             InlineKeyboardButton("🎤 발음 마스터", callback_data="pronunciation_master")],
-            [InlineKeyboardButton("🔬 고급 분석", callback_data="advanced_analytics"),
-             InlineKeyboardButton("🏆 마스터 도전", callback_data="master_challenges")]
-        ]
-    
-    # 공통 기능 버튼
-    common_buttons = [
-        [InlineKeyboardButton("📊 학습 진도 확인", callback_data="my_progress"),
-         InlineKeyboardButton("📅 일일 학습 설정", callback_data="daily_learning")],
-        [InlineKeyboardButton("🌍 번역 & 음성", callback_data="translation_menu"),
-         InlineKeyboardButton("❓ 도움말 & 가이드", callback_data="help_guide")]
-    ]
-    
-    all_buttons = primary_buttons + common_buttons
-    reply_markup = InlineKeyboardMarkup(all_buttons)
-    
-    await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+    await update.message.reply_text(welcome_message)
     
     # 개인화된 학습 팁 메시지
     tip_message = f"""
@@ -689,9 +672,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 🌟 **함께 러시아어 마스터 되어요!** 🌟
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-💬 **바로 시작**: 위 버튼을 클릭하거나
+💬 **바로 시작**: 위 번호를 입력하세요!
 ✨ **자유 대화**: 그냥 메시지를 보내세요!
-📚 **도움말**: `/help`로 전체 기능 확인
+📚 **전체 명령어**: `/help`로 확인
 
 🔥 **목표**: 100일 안에 러시아어 마스터! 🔥
     """
