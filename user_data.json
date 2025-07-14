@@ -1,1 +1,17 @@
-{}
+{
+    "1234567890": {
+        "plan": "Pro",
+        "subscribed_daily": true,
+        "quest_state": {
+            "current_quest": null,
+            "stage": 0
+        },
+        "stats": {
+            "start_date": "2025-07-13T12:44:57.149102+03:00",
+            "last_active_date": "2025-07-13T12:44:57.149149+03:00",
+            "quests_completed": 0,
+            "sentences_corrected": 0,
+            "daily_words_received": 0
+        }
+    }
+}
