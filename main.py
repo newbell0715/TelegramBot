@@ -25,8 +25,13 @@ for handler in logging.root.handlers:
 async def callback_query_handler(update, context):
     """인라인 키보드 콜백 쿼리 처리"""
     try:
+        logger.info("🚨 콜백 쿼리 핸들러 호출됨!")
+        
         query = update.callback_query
+        logger.info(f"📱 query 객체: {query}")
+        
         await query.answer()
+        logger.info("✅ query.answer() 완료")
         
         data = query.data
         chat_id = query.message.chat_id
@@ -34,6 +39,11 @@ async def callback_query_handler(update, context):
         
         # 디버깅용 로그
         logger.info(f"🔘 콜백 수신: {data} (사용자: {user.first_name}, 채팅: {chat_id})")
+        logger.info(f"📊 Raw update: {update}")
+        
+        # 테스트용 즉시 응답
+        await query.message.reply_text(f"🧪 **테스트 응답**\n\n수신된 콜백: `{data}`\n시간: {query.message.date}")
+        logger.info("🧪 테스트 응답 전송 완료")
         
         # SimpleBot 콜백 처리
         if data == "start_quest":
@@ -215,12 +225,14 @@ def main():
     # === 시스템 관련 핸들러들 ===
     application.add_handler(CommandHandler("model_status", SimpleBot.model_status_command))
     
+    # === 콜백 쿼리 핸들러 (최우선 등록) ===
+    logger.info("🔘 콜백 쿼리 핸들러 등록 중...")
+    application.add_handler(CallbackQueryHandler(callback_query_handler))
+    logger.info("✅ 콜백 쿼리 핸들러 등록 완료!")
+    
     # === 퀴즈 관련 핸들러들 ===
     from handlers.quiz import quiz_command
     application.add_handler(CommandHandler("quiz", quiz_command))
-    
-    # === 콜백 쿼리 핸들러 ===
-    application.add_handler(CallbackQueryHandler(callback_query_handler))
     
     # === AI 대화 핸들러 (명령어가 아닌 일반 메시지) ===
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, SimpleBot.handle_message))
