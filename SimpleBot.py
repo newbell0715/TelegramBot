@@ -1277,8 +1277,8 @@ async def main() -> None:
     application.add_handler(CommandHandler("ls", listening_command))
     application.add_handler(CommandHandler("trls", translate_listen_command))
     application.add_handler(CommandHandler("model_status", model_status_command))
-    application.add_handler(CommandHandler("힌트", hint_command))
-    application.add_handler(CommandHandler("번역", translation_command))
+    application.add_handler(CommandHandler("hint", hint_command))
+    application.add_handler(CommandHandler("trans", translation_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     scheduler = AsyncIOScheduler(timezone=MSK)
