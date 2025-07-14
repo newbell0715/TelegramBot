@@ -196,11 +196,36 @@ async def callback_query_handler(update, context):
             pass
 
 def main():
-    """메인 실행 함수"""
+    """메인 실행 함수 - 강력한 충돌 방지"""
+    
+    logger.info("🚀 봇 시작 - 충돌 방지 모드")
+    
+    # pending updates 완전 클리어
+    import requests
+    clear_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getUpdates?offset=-1"
+    try:
+        response = requests.get(clear_url)
+        logger.info(f"📋 pending updates 클리어: {response.status_code}")
+    except Exception as e:
+        logger.warning(f"⚠️ pending updates 클리어 실패: {e}")
+    
+    # 기존 webhook 삭제
+    try:
+        delete_url = f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook?drop_pending_updates=true"
+        response = requests.get(delete_url)
+        logger.info(f"🗑️ webhook 삭제: {response.status_code}")
+    except Exception as e:
+        logger.warning(f"⚠️ webhook 삭제 실패: {e}")
+    
     import SimpleBot
     
     # 애플리케이션 생성
     application = Application.builder().token(BOT_TOKEN).build()
+    
+    # === 콜백 쿼리 핸들러 (최우선 등록) ===
+    logger.info("🔘 콜백 쿼리 핸들러 등록 중...")
+    application.add_handler(CallbackQueryHandler(callback_query_handler))
+    logger.info("✅ 콜백 쿼리 핸들러 등록 완료!")
     
     # === 기본 명령어 핸들러들 ===
     application.add_handler(CommandHandler("start", SimpleBot.start_command))
@@ -225,11 +250,6 @@ def main():
     # === 시스템 관련 핸들러들 ===
     application.add_handler(CommandHandler("model_status", SimpleBot.model_status_command))
     
-    # === 콜백 쿼리 핸들러 (최우선 등록) ===
-    logger.info("🔘 콜백 쿼리 핸들러 등록 중...")
-    application.add_handler(CallbackQueryHandler(callback_query_handler))
-    logger.info("✅ 콜백 쿼리 핸들러 등록 완료!")
-    
     # === 퀴즈 관련 핸들러들 ===
     from handlers.quiz import quiz_command
     application.add_handler(CommandHandler("quiz", quiz_command))
@@ -250,12 +270,16 @@ def main():
     logger.info("   • /my_progress - 상세 학습 통계")
     logger.info("🔘 콜백 쿼리 핸들러 등록 완료!")
     
-    # 봇 실행 (충돌 방지 설정)
-    logger.info("🚀 봇 폴링 시작 - 충돌 방지 모드")
+    # 봇 실행 (최강 충돌 방지 설정)
+    logger.info("🔥 충돌 방지 폴링 시작!")
     application.run_polling(
-        drop_pending_updates=True,  # 시작 시 모든 pending updates 삭제
-        close_loop=False,           # 루프 자동 종료 비활성화
-        stop_signals=None           # 신호 처리 비활성화 (Railway 환경용)
+        drop_pending_updates=True,    # 시작 시 모든 pending updates 삭제
+        close_loop=False,             # 루프 자동 종료 비활성화
+        stop_signals=None,            # 신호 처리 완전 비활성화
+        allowed_updates=None,         # 모든 업데이트 허용
+        pool_timeout=30,              # 긴 타임아웃
+        connect_timeout=30,           # 연결 타임아웃
+        read_timeout=30               # 읽기 타임아웃
     )
 
 if __name__ == '__main__':
