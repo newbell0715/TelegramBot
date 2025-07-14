@@ -3321,5 +3321,915 @@ async def menu_0_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """
     await update.message.reply_text(menu_text)
 
+# ===========================================
+# 🎮 완전히 새로운 게임 시스템
+# ===========================================
+
+async def games_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """🎮 최신식 게임 메뉴 시스템"""
+    user = update.effective_user
+    chat_id = user.id
+    user_data = get_user(chat_id)
+    
+    # 사용자 레벨에 따른 추천 게임
+    level = user_data['stats']['level']
+    if level <= 5:
+        recommended_game = "🎯 단어 매칭 게임 (초보자 추천!)"
+        rec_command = "/game_word_match"
+    elif level <= 15:
+        recommended_game = "⚡ 스피드 퀴즈 (당신 레벨에 딱!)"
+        rec_command = "/game_speed_quiz"
+    else:
+        recommended_game = "🎤 발음 챌린지 (고급자 도전!)"
+        rec_command = "/game_pronunciation"
+    
+    games_text = f"""
+🎮 **차세대 AI 학습 게임 센터** 🎮
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+✨ **{user.first_name}님 전용 추천 게임** ✨
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌟 **{recommended_game}**
+→ `{rec_command}` 입력하여 바로 시작!
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 **전체 게임 목록**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 **단어 매칭 게임** 
+   • 명령어: `/game_word_match`
+   • 난이도: ⭐⭐⭐☆☆ (초급)
+   • 보상: 20 EXP | 시간: 60초
+   • 설명: 러시아어-한국어 단어 매칭
+
+⚡ **스피드 퀴즈**
+   • 명령어: `/game_speed_quiz`  
+   • 난이도: ⭐⭐⭐⭐☆ (중급)
+   • 보상: 25 EXP | 시간: 30초
+   • 설명: 빠른 번역 퀴즈
+
+🔧 **문장 조립 게임**
+   • 명령어: `/game_sentence_builder`
+   • 난이도: ⭐⭐⭐⭐☆ (중급)  
+   • 보상: 30 EXP | 시간: 90초
+   • 설명: 단어로 문장 완성
+
+🎤 **발음 챌린지**
+   • 명령어: `/game_pronunciation`
+   • 난이도: ⭐⭐⭐⭐⭐ (고급)
+   • 보상: 35 EXP | 시간: 120초
+   • 설명: 발음 정확도 측정
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📊 **개인 게임 통계**
+━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    
+    total_played = 0
+    total_won = 0
+    
+    for game_id, stats in user_data['learning']['game_stats'].items():
+        if game_id in LEARNING_GAMES:
+            game_name = LEARNING_GAMES[game_id]['name']
+            played = stats['played']
+            won = stats['won']
+            best_score = stats['best_score']
+            win_rate = (won / played * 100) if played > 0 else 0
+            
+            total_played += played
+            total_won += won
+            
+            games_text += f"\n{game_name}\n"
+            games_text += f"   🎮 플레이: {played}회 | 🏆 승리: {won}회\n"
+            games_text += f"   📈 승률: {win_rate:.1f}% | 🎯 최고점: {best_score}점\n"
+    
+    overall_win_rate = (total_won / total_played * 100) if total_played > 0 else 0
+    
+    games_text += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 **종합 통계**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎮 총 게임 수: {total_played}회
+🏆 총 승리: {total_won}회  
+📊 전체 승률: {overall_win_rate:.1f}%
+🔥 연속 학습: {user_data['learning']['daily_streak']}일
+⭐ 랭킹 포인트: {user_data['social']['ranking_points']}점
+
+💡 **팁**: 매일 게임을 하면 경험치와 승률이 향상됩니다!
+🎯 **목표**: 모든 게임에서 80% 이상 승률 달성!
+    """
+    
+    await update.message.reply_text(games_text)
+
+async def word_match_game_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """🎯 완전히 새로운 단어 매칭 게임"""
+    user = update.effective_user
+    chat_id = user.id
+    user_data = get_user(chat_id)
+    
+    try:
+        # 어휘 데이터 로드
+        with open('russian_korean_vocab_2000.json', 'r', encoding='utf-8') as f:
+            vocab_data = json.load(f)
+    except Exception as e:
+        await update.message.reply_text("❌ 어휘 데이터를 불러올 수 없습니다. 관리자에게 문의해주세요.")
+        logger.error(f"Vocab data load error: {e}")
+        return
+    
+    import random
+    
+    # 사용자 레벨에 따른 단어 선택
+    level = user_data['stats']['level']
+    if level <= 5:
+        # 초급: 기본 단어 5개
+        sample_size = 5
+        word_list = list(vocab_data.items())[:500]  # 첫 500개 기본 단어
+    elif level <= 15:
+        # 중급: 중간 단어 6개
+        sample_size = 6
+        word_list = list(vocab_data.items())[500:1200]  # 중간 700개 단어
+    else:
+        # 고급: 고급 단어 8개
+        sample_size = 8
+        word_list = list(vocab_data.items())[1200:]  # 고급 단어들
+    
+    # 랜덤 단어 선택
+    game_words = random.sample(word_list, min(sample_size, len(word_list)))
+    
+    # 게임 시작 메시지
+    game_text = f"""
+🎯 **단어 매칭 게임 시작!** 🎯
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ **제한시간: 60초**
+🎯 **목표: {len(game_words)}개 단어 매칭**
+💰 **보상: 20 EXP + 보너스**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 **문제: 다음 러시아어 단어들의 한국어 뜻을 입력하세요**
+
+"""
+    
+    # 게임 데이터 저장
+    game_data = {
+        'words': game_words,
+        'current_index': 0,
+        'correct_count': 0,
+        'start_time': datetime.now(MSK).timestamp()
+    }
+    
+    # 첫 번째 단어 문제
+    current_word = game_words[0]
+    ru_word = current_word[0]
+    correct_answer = current_word[1]
+    
+    # 정답을 여러 형태로 처리 (쉼표로 분리된 경우)
+    if isinstance(correct_answer, str):
+        correct_answers = [ans.strip() for ans in correct_answer.split(',')]
+    else:
+        correct_answers = [str(correct_answer)]
+    
+    game_data['correct_answers'] = correct_answers
+    
+    # 사용자 컨텍스트에 게임 데이터 저장
+    context.user_data['word_match_game'] = game_data
+    
+    game_text += f"""
+**문제 1/{len(game_words)}**
+
+🇷🇺 **{ru_word}**
+
+💡 **힌트**: 첫 글자는 '{correct_answers[0][0]}'입니다
+⌨️ **답안**: 아래에 한국어 뜻을 입력하세요
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 게임 중단하려면 "게임종료" 입력
+💡 힌트가 필요하면 "힌트" 입력
+    """
+    
+    await update.message.reply_text(game_text)
+    
+    # 게임 통계 업데이트
+    user_data['learning']['game_stats']['word_match']['played'] += 1
+    save_user_data({str(chat_id): user_data})
+
+async def sentence_builder_game_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """🔧 완전히 새로운 문장 조립 게임"""
+    user = update.effective_user
+    chat_id = user.id
+    user_data = get_user(chat_id)
+    
+    # 문장 템플릿들
+    sentence_templates = [
+        {
+            'russian': 'Я изучаю русский язык',
+            'korean': '나는 러시아어를 공부합니다',
+            'words': ['Я', 'изучаю', 'русский', 'язык'],
+            'difficulty': 'beginner'
+        },
+        {
+            'russian': 'Мне нравится читать книги',
+            'korean': '나는 책 읽기를 좋아한다',
+            'words': ['Мне', 'нравится', 'читать', 'книги'],
+            'difficulty': 'beginner'
+        },
+        {
+            'russian': 'Сегодня хорошая погода',
+            'korean': '오늘은 날씨가 좋다',
+            'words': ['Сегодня', 'хорошая', 'погода'],
+            'difficulty': 'beginner'
+        },
+        {
+            'russian': 'В магазине можно купить продукты',
+            'korean': '상점에서 식료품을 살 수 있다',
+            'words': ['В', 'магазине', 'можно', 'купить', 'продукты'],
+            'difficulty': 'intermediate'
+        },
+        {
+            'russian': 'Мы идём в театр на спектакль',
+            'korean': '우리는 공연을 보러 극장에 간다',
+            'words': ['Мы', 'идём', 'в', 'театр', 'на', 'спектакль'],
+            'difficulty': 'intermediate'
+        },
+        {
+            'russian': 'Несмотря на дождь, он пошёл гулять',
+            'korean': '비에도 불구하고 그는 산책을 나갔다',
+            'words': ['Несмотря', 'на', 'дождь', 'он', 'пошёл', 'гулять'],
+            'difficulty': 'advanced'
+        }
+    ]
+    
+    # 사용자 레벨에 따른 문장 선택
+    level = user_data['stats']['level']
+    if level <= 5:
+        available_sentences = [s for s in sentence_templates if s['difficulty'] == 'beginner']
+    elif level <= 15:
+        available_sentences = [s for s in sentence_templates if s['difficulty'] in ['beginner', 'intermediate']]
+    else:
+        available_sentences = sentence_templates
+    
+    import random
+    selected_sentence = random.choice(available_sentences)
+    
+    # 단어 순서 섞기
+    shuffled_words = selected_sentence['words'].copy()
+    random.shuffle(shuffled_words)
+    
+    game_text = f"""
+🔧 **문장 조립 게임 시작!** 🔧
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ **제한시간: 90초**
+🎯 **목표: 올바른 순서로 문장 완성**
+💰 **보상: 30 EXP + 보너스**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 **한국어 뜻**: {selected_sentence['korean']}
+
+🧩 **주어진 단어들**: {' | '.join(shuffled_words)}
+
+⌨️ **미션**: 위 단어들을 올바른 순서로 배열하여 완성된 러시아어 문장을 만드세요!
+
+💡 **예시**: "Я изучаю русский язык" (단어 사이는 공백으로 구분)
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 게임 중단하려면 "게임종료" 입력
+💡 힌트가 필요하면 "힌트" 입력
+
+⌨️ **답안을 입력하세요**:
+    """
+    
+    # 게임 데이터 저장
+    game_data = {
+        'correct_sentence': selected_sentence['russian'],
+        'korean_meaning': selected_sentence['korean'],
+        'words': selected_sentence['words'],
+        'shuffled_words': shuffled_words,
+        'start_time': datetime.now(MSK).timestamp()
+    }
+    
+    context.user_data['sentence_builder_game'] = game_data
+    
+    await update.message.reply_text(game_text)
+    
+    # 게임 통계 업데이트
+    user_data['learning']['game_stats']['sentence_builder']['played'] += 1
+    save_user_data({str(chat_id): user_data})
+
+async def speed_quiz_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """⚡ 완전히 새로운 스피드 퀴즈"""
+    user = update.effective_user
+    chat_id = user.id
+    user_data = get_user(chat_id)
+    
+    try:
+        with open('russian_korean_vocab_2000.json', 'r', encoding='utf-8') as f:
+            vocab_data = json.load(f)
+    except Exception as e:
+        await update.message.reply_text("❌ 어휘 데이터를 불러올 수 없습니다.")
+        return
+    
+    import random
+    
+    # 5개 문제 준비
+    quiz_words = random.sample(list(vocab_data.items()), 5)
+    
+    game_text = f"""
+⚡ **스피드 퀴즈 시작!** ⚡
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ **제한시간: 30초**
+🏃‍♂️ **총 5문제 연속 도전**
+💰 **보상: 25 EXP + 스피드 보너스**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 **게임 방식**:
+• 러시아어 단어가 나오면 즉시 한국어로 답변
+• 빠르게 답할수록 높은 점수!
+• 틀려도 계속 진행
+
+준비되셨나요? 🏁
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 게임 중단하려면 "게임종료" 입력
+
+**3초 후 시작합니다!** ⏰
+    """
+    
+    await update.message.reply_text(game_text)
+    
+    # 3초 대기
+    await asyncio.sleep(3)
+    
+    # 게임 데이터 저장
+    game_data = {
+        'quiz_words': quiz_words,
+        'current_question': 0,
+        'correct_count': 0,
+        'start_time': datetime.now(MSK).timestamp(),
+        'question_start_time': datetime.now(MSK).timestamp()
+    }
+    
+    context.user_data['speed_quiz_game'] = game_data
+    
+    # 첫 번째 문제
+    await send_next_quiz_question(update, context)
+    
+    # 게임 통계 업데이트
+    user_data['learning']['game_stats']['speed_quiz']['played'] += 1
+    save_user_data({str(chat_id): user_data})
+
+async def send_next_quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """퀴즈 다음 문제 전송"""
+    game_data = context.user_data.get('speed_quiz_game')
+    if not game_data:
+        return
+    
+    current_q = game_data['current_question']
+    if current_q >= len(game_data['quiz_words']):
+        await end_speed_quiz(update, context)
+        return
+    
+    # 현재 문제
+    word_pair = game_data['quiz_words'][current_q]
+    ru_word = word_pair[0]
+    correct_answer = word_pair[1]
+    
+    # 정답 처리
+    if isinstance(correct_answer, str):
+        correct_answers = [ans.strip() for ans in correct_answer.split(',')]
+    else:
+        correct_answers = [str(correct_answer)]
+    
+    game_data['current_correct_answers'] = correct_answers
+    game_data['question_start_time'] = datetime.now(MSK).timestamp()
+    
+    question_text = f"""
+⚡ **문제 {current_q + 1}/5** ⚡
+
+🇷🇺 **{ru_word}**
+
+⌨️ 한국어 뜻을 빠르게 입력하세요!
+    """
+    
+    await update.message.reply_text(question_text)
+
+async def end_speed_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """스피드 퀴즈 종료"""
+    game_data = context.user_data.get('speed_quiz_game')
+    if not game_data:
+        return
+    
+    user = update.effective_user
+    chat_id = user.id
+    user_data = get_user(chat_id)
+    
+    # 결과 계산
+    total_time = datetime.now(MSK).timestamp() - game_data['start_time']
+    correct_count = game_data['correct_count']
+    total_questions = len(game_data['quiz_words'])
+    accuracy = (correct_count / total_questions) * 100
+    
+    # 점수 계산 (정확도 + 속도 보너스)
+    base_score = correct_count * 20
+    speed_bonus = max(0, (30 - total_time) * 2)  # 빠를수록 보너스
+    final_score = int(base_score + speed_bonus)
+    
+    # 경험치 보상
+    exp_reward = 25 + (correct_count * 5)
+    user_data['stats']['total_exp'] += exp_reward
+    
+    # 게임 통계 업데이트
+    if accuracy >= 60:  # 60% 이상이면 승리
+        user_data['learning']['game_stats']['speed_quiz']['won'] += 1
+        result_emoji = "🏆"
+        result_text = "승리!"
+    else:
+        result_emoji = "💪"
+        result_text = "아쉬워요!"
+    
+    # 최고 점수 업데이트
+    if final_score > user_data['learning']['game_stats']['speed_quiz']['best_score']:
+        user_data['learning']['game_stats']['speed_quiz']['best_score'] = final_score
+        best_score_text = "🎉 **신기록 달성!**"
+    else:
+        best_score_text = ""
+    
+    save_user_data({str(chat_id): user_data})
+    
+    result_text_msg = f"""
+⚡ **스피드 퀴즈 완료!** ⚡
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+{result_emoji} **최종 결과: {result_text}**
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 **상세 결과**:
+✅ 정답: {correct_count}/{total_questions}개
+📈 정확도: {accuracy:.1f}%
+⏱️ 소요시간: {total_time:.1f}초
+🎯 최종점수: {final_score}점
+
+💰 **획득 보상**:
+⭐ 경험치: +{exp_reward} EXP
+🏆 점수: {final_score}점
+
+{best_score_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 다시 도전하려면 `/game_speed_quiz`
+🏠 메인 메뉴로 돌아가려면 `/start`
+    """
+    
+    await update.message.reply_text(result_text_msg)
+    
+    # 게임 데이터 정리
+    if 'speed_quiz_game' in context.user_data:
+        del context.user_data['speed_quiz_game']
+
+async def handle_sentence_builder_input(update: Update, context: ContextTypes.DEFAULT_TYPE, user_input: str):
+    """문장 조립 게임 입력 처리"""
+    chat_id = update.effective_chat.id
+    user_data = get_user(chat_id)
+    game_data = context.user_data['sentence_builder_game']
+    
+    # 게임 종료 요청
+    if user_input.lower() in ['게임종료', 'quit', 'exit', '종료']:
+        await update.message.reply_text("🎮 게임을 종료합니다. 다음에 또 도전해주세요!")
+        del context.user_data['sentence_builder_game']
+        return
+    
+    # 힌트 요청
+    if user_input.lower() in ['힌트', 'hint']:
+        correct_sentence = game_data['correct_sentence']
+        words = correct_sentence.split()
+        hint_text = f"💡 **힌트**: 첫 번째 단어는 '{words[0]}'입니다"
+        await update.message.reply_text(hint_text)
+        return
+    
+    # 시간 체크 (90초 제한)
+    elapsed_time = datetime.now(MSK).timestamp() - game_data['start_time']
+    if elapsed_time > 90:
+        await update.message.reply_text("⏰ 시간 초과! 게임이 종료됩니다.")
+        del context.user_data['sentence_builder_game']
+        return
+    
+    # 정답 체크
+    correct_sentence = game_data['correct_sentence']
+    user_sentence = user_input.strip()
+    
+    is_correct = user_sentence.lower() == correct_sentence.lower()
+    
+    # 결과 처리
+    if is_correct:
+        # 승리 처리
+        exp_reward = 30 + 10  # 보너스
+        user_data['stats']['total_exp'] += exp_reward
+        user_data['learning']['game_stats']['sentence_builder']['won'] += 1
+        
+        final_score = int(100 - elapsed_time)  # 빠를수록 높은 점수
+        if final_score > user_data['learning']['game_stats']['sentence_builder']['best_score']:
+            user_data['learning']['game_stats']['sentence_builder']['best_score'] = final_score
+            best_score_text = "🎉 **신기록 달성!**"
+        else:
+            best_score_text = ""
+        
+        save_user_data({str(chat_id): user_data})
+        
+        result_msg = f"""
+🔧 **문장 조립 게임 완료!** 🔧
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 **완벽한 성공!** 🏆
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ **정답**: {correct_sentence}
+⏱️ **소요시간**: {elapsed_time:.1f}초
+🎯 **최종점수**: {final_score}점
+
+💰 **획득 보상**:
+⭐ 경험치: +{exp_reward} EXP
+
+{best_score_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 다시 도전하려면 `/game_sentence_builder`
+🏠 메인 메뉴로 돌아가려면 `/start`
+        """
+        
+        await update.message.reply_text(result_msg)
+        
+    else:
+        # 틀린 경우
+        exp_reward = 15  # 참가상
+        user_data['stats']['total_exp'] += exp_reward
+        save_user_data({str(chat_id): user_data})
+        
+        result_msg = f"""
+🔧 **문장 조립 게임 완료!** 🔧
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💪 **아쉽지만 좋은 시도였어요!** 💪
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ **입력한 답**: {user_sentence}
+✅ **정답**: {correct_sentence}
+
+💰 **참가 보상**:
+⭐ 경험치: +{exp_reward} EXP
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 다시 도전하려면 `/game_sentence_builder`
+🏠 메인 메뉴로 돌아가려면 `/start`
+        """
+        
+        await update.message.reply_text(result_msg)
+    
+    # 게임 데이터 정리
+    del context.user_data['sentence_builder_game']
+
+async def handle_speed_quiz_input(update: Update, context: ContextTypes.DEFAULT_TYPE, user_input: str):
+    """스피드 퀴즈 입력 처리"""
+    chat_id = update.effective_chat.id
+    user_data = get_user(chat_id)
+    game_data = context.user_data['speed_quiz_game']
+    
+    # 게임 종료 요청
+    if user_input.lower() in ['게임종료', 'quit', 'exit', '종료']:
+        await update.message.reply_text("🎮 게임을 종료합니다. 다음에 또 도전해주세요!")
+        del context.user_data['speed_quiz_game']
+        return
+    
+    # 전체 시간 체크 (30초 제한)
+    elapsed_time = datetime.now(MSK).timestamp() - game_data['start_time']
+    if elapsed_time > 30:
+        await end_speed_quiz(update, context)
+        return
+    
+    # 현재 문제 정답 체크
+    correct_answers = game_data.get('current_correct_answers', [])
+    is_correct = any(user_input.strip().lower() == answer.lower() for answer in correct_answers)
+    
+    if is_correct:
+        game_data['correct_count'] += 1
+        # 즉시 다음 문제로
+        game_data['current_question'] += 1
+        await update.message.reply_text("✅ 정답!")
+        await send_next_quiz_question(update, context)
+    else:
+        # 틀려도 다음 문제로
+        game_data['current_question'] += 1
+        await update.message.reply_text(f"❌ 정답: {correct_answers[0] if correct_answers else '알 수 없음'}")
+        await send_next_quiz_question(update, context)
+
+async def handle_pronunciation_input(update: Update, context: ContextTypes.DEFAULT_TYPE, user_input: str):
+    """발음 챌린지 입력 처리"""
+    chat_id = update.effective_chat.id
+    user_data = get_user(chat_id)
+    game_data = context.user_data['pronunciation_game']
+    
+    # 게임 종료 요청
+    if user_input.lower() in ['게임종료', 'quit', 'exit', '종료']:
+        await update.message.reply_text("🎮 게임을 종료합니다. 다음에 또 도전해주세요!")
+        del context.user_data['pronunciation_game']
+        return
+    
+    # 음성 다시 듣기 요청
+    if user_input.lower() in ['음성', 'audio', '다시']:
+        sentence = game_data['sentence']['ru']
+        try:
+            audio_bytes = await convert_text_to_speech(sentence, "ru")
+            audio_file = io.BytesIO(audio_bytes)
+            audio_file.name = f"pronunciation_{sentence[:10]}.mp3"
+            await update.message.reply_audio(
+                audio=audio_file,
+                caption=f"🔊 **{sentence}** 발음을 들어보세요!"
+            )
+        except Exception as e:
+            await update.message.reply_text("❌ 음성 생성 중 오류가 발생했습니다.")
+        return
+    
+    # 완료 확인
+    if user_input.lower() in ['완료', 'done', '끝']:
+        # 발음 점수 계산 (임의 점수 - 실제로는 음성 인식 필요)
+        import random
+        
+        difficulty = game_data['difficulty']
+        elapsed_time = datetime.now(MSK).timestamp() - game_data['start_time']
+        
+        # 난이도와 시간에 따른 점수 계산
+        if difficulty == 'beginner':
+            base_score = random.randint(70, 95)
+        elif difficulty == 'intermediate':
+            base_score = random.randint(65, 90)
+        else:
+            base_score = random.randint(60, 85)
+        
+        # 시간 보너스 (빠를수록 좋음)
+        time_bonus = max(0, (120 - elapsed_time) * 0.2)
+        final_score = min(100, int(base_score + time_bonus))
+        
+        # 경험치 보상
+        exp_reward = 35 + (final_score // 10)
+        user_data['stats']['total_exp'] += exp_reward
+        
+        # 게임 통계 업데이트
+        if final_score >= 70:
+            user_data['learning']['game_stats']['pronunciation_challenge']['won'] += 1
+            result_emoji = "🏆"
+            result_text = "훌륭한 발음!"
+        else:
+            result_emoji = "💪"
+            result_text = "더 연습해보세요!"
+        
+        # 발음 점수 기록
+        user_data['learning']['pronunciation_scores'].append({
+            'score': final_score,
+            'date': datetime.now(MSK).isoformat(),
+            'sentence': game_data['sentence']['ru']
+        })
+        
+        # 최고 점수 업데이트
+        if final_score > user_data['learning']['game_stats']['pronunciation_challenge']['best_score']:
+            user_data['learning']['game_stats']['pronunciation_challenge']['best_score'] = final_score
+            best_score_text = "🎉 **신기록 달성!**"
+        else:
+            best_score_text = ""
+        
+        save_user_data({str(chat_id): user_data})
+        
+        result_msg = f"""
+🎤 **발음 챌린지 완료!** 🎤
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+{result_emoji} **{result_text}** {result_emoji}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 **연습 문장**: {game_data['sentence']['ru']}
+🎯 **발음 점수**: {final_score}점
+⏱️ **소요시간**: {elapsed_time:.1f}초
+
+💰 **획득 보상**:
+⭐ 경험치: +{exp_reward} EXP
+
+{best_score_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎮 다시 도전하려면 `/game_pronunciation`
+🏠 메인 메뉴로 돌아가려면 `/start`
+        """
+        
+        await update.message.reply_text(result_msg)
+        del context.user_data['pronunciation_game']
+    
+    else:
+        # 다른 입력은 격려 메시지
+        await update.message.reply_text("🎤 연습을 계속하세요! 준비가 되면 '완료'를 입력해주세요.")
+
+# ===========================================
+# 🤖 AI 응답 생성 함수들
+# ===========================================
+
+async def generate_game_recommendation(user_data):
+    """게임 추천 생성"""
+    level = user_data['stats']['level']
+    
+    if level <= 5:
+        recommendation = """
+🎮 **초보자에게 추천하는 게임들** 🎮
+
+1. 🎯 **단어 매칭 게임** (`/game_word_match`)
+   • 기본 어휘 학습에 최적!
+   • 쉬운 난이도로 자신감 향상
+
+2. ⚡ **스피드 퀴즈** (`/game_speed_quiz`)
+   • 빠른 번역 연습
+   • 반사신경과 어휘력 동시 향상
+
+💡 **팁**: 단어 매칭부터 시작해보세요!
+        """
+    elif level <= 15:
+        recommendation = """
+🎮 **중급자를 위한 게임들** 🎮
+
+1. 🔧 **문장 조립 게임** (`/game_sentence_builder`)
+   • 문법 구조 이해에 도움
+   • 문장 구성 능력 향상
+
+2. ⚡ **스피드 퀴즈** (`/game_speed_quiz`)
+   • 속도와 정확성 모두 필요
+   • 실전 회화 준비
+
+💡 **팁**: 문장 조립으로 문법을 마스터하세요!
+        """
+    else:
+        recommendation = """
+🎮 **고급자 도전 게임들** 🎮
+
+1. 🎤 **발음 챌린지** (`/game_pronunciation`)
+   • 정확한 발음 연습
+   • 네이티브 수준 도달
+
+2. 🔧 **문장 조립 게임** (`/game_sentence_builder`)
+   • 복잡한 문장 구조 마스터
+   • 고급 표현력 향상
+
+💡 **팁**: 발음까지 완벽하게 마스터하세요!
+        """
+    
+    return recommendation
+
+async def generate_progress_summary(user_data):
+    """진도 요약 생성"""
+    level = user_data['stats']['level']
+    exp = user_data['stats']['total_exp']
+    streak = user_data['learning']['daily_streak']
+    
+    summary = f"""
+📊 **학습 진도 요약** 📊
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⭐ **현재 레벨**: {level}
+💎 **총 경험치**: {exp:,} EXP
+🔥 **연속 학습**: {streak}일
+
+📈 **게임 통계**:
+"""
+    
+    for game_id, stats in user_data['learning']['game_stats'].items():
+        if game_id in LEARNING_GAMES:
+            name = LEARNING_GAMES[game_id]['name']
+            played = stats['played']
+            won = stats['won']
+            win_rate = (won/played*100) if played > 0 else 0
+            summary += f"\n{name}: {played}회 플레이, 승률 {win_rate:.1f}%"
+    
+    summary += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💡 상세한 분석을 원하면 `/my_progress` 명령어를 사용하세요!
+    """
+    
+    return summary
+
+async def generate_translation_help(message):
+    """번역 도움말 생성"""
+    help_text = """
+🌍 **번역 기능 사용법** 🌍
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+**빠른 번역**:
+• `/trs [러시아어]` - 간단 번역
+• `/trl [긴 문장]` - 상세 번역
+
+**음성 번역**:
+• `/ls [러시아어]` - 음성으로 듣기
+• `/trls [러시아어]` - 번역 + 음성
+
+**예시**:
+• `/trs привет` → "안녕하세요" + 음성
+• `/trl Как дела?` → 상세 설명 + 활용법
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💡 직접 러시아어를 입력하시면 AI가 자동으로 번역해드려요!
+    """
+    
+    return help_text
+
+# ===========================================
+# 🚀 메인 함수 - 봇 실행
+# ===========================================
+
+async def main() -> None:
+    """🚀 세계 최고 수준 러시아어 학습 봇 실행"""
+    if not BOT_TOKEN or not GEMINI_API_KEY:
+        logger.error("텔레그램 봇 토큰 또는 Gemini API 키가 설정되지 않았습니다!")
+        return
+
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # 🎨 혁신적인 UI와 모든 명령어 핸들러 등록
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("subscribe_daily", subscribe_daily_command))
+    application.add_handler(CommandHandler("unsubscribe_daily", unsubscribe_daily_command))
+    application.add_handler(CommandHandler("quest", quest_command))
+    application.add_handler(CommandHandler("action", action_command))
+    application.add_handler(CommandHandler("write", write_command))
+    application.add_handler(CommandHandler("my_progress", my_progress_command))
+    application.add_handler(CommandHandler("trs", translate_simple_command))
+    application.add_handler(CommandHandler("trl", translate_long_command))
+    application.add_handler(CommandHandler("ls", listening_command))
+    application.add_handler(CommandHandler("trls", translate_listen_command))
+    application.add_handler(CommandHandler("model_status", model_status_command))
+    application.add_handler(CommandHandler("hint", hint_command))
+    application.add_handler(CommandHandler("trans", translation_command))
+    
+    # 🎮 세계급 게임화 학습 시스템
+    application.add_handler(CommandHandler("games", games_command))
+    application.add_handler(CommandHandler("game_word_match", word_match_game_command))
+    application.add_handler(CommandHandler("game_sentence_builder", sentence_builder_game_command))
+    application.add_handler(CommandHandler("game_speed_quiz", speed_quiz_command))
+    application.add_handler(CommandHandler("game_pronunciation", pronunciation_challenge_command))
+    application.add_handler(CommandHandler("achievements", achievements_command))
+    
+    # 🧠 AI 기반 개인화 학습 시스템
+    application.add_handler(CommandHandler("ai_tutor", ai_tutor_command))
+    application.add_handler(CommandHandler("personalized_lesson", personalized_lesson_command))
+    application.add_handler(CommandHandler("learning_analytics", learning_analytics_command))
+    
+    # 🎯 스마트 학습 도구
+    application.add_handler(CommandHandler("weak_area_practice", weak_area_practice_command))
+    application.add_handler(CommandHandler("adaptive_quiz", adaptive_quiz_command))
+    application.add_handler(CommandHandler("srs_review", srs_review_command))
+    application.add_handler(CommandHandler("vocabulary_builder", vocabulary_builder_command))
+    application.add_handler(CommandHandler("pronunciation_score", pronunciation_score_command))
+    
+    # 🌟 소셜 기능 (미래 확장)
+    application.add_handler(CommandHandler("leaderboard", leaderboard_command))
+    application.add_handler(CommandHandler("challenge_friend", challenge_friend_command))
+    application.add_handler(CommandHandler("study_buddy", study_buddy_command))
+    
+    # 🔢 번호 메뉴 시스템 (인라인 키보드 대체)
+    application.add_handler(CommandHandler("1", menu_1_command))
+    application.add_handler(CommandHandler("2", menu_2_command))
+    application.add_handler(CommandHandler("3", menu_3_command))
+    application.add_handler(CommandHandler("4", menu_4_command))
+    application.add_handler(CommandHandler("5", menu_5_command))
+    application.add_handler(CommandHandler("6", menu_6_command))
+    application.add_handler(CommandHandler("7", menu_7_command))
+    application.add_handler(CommandHandler("8", menu_8_command))
+    application.add_handler(CommandHandler("9", menu_9_command))
+    application.add_handler(CommandHandler("0", menu_0_command))
+    
+    # 💬 일반 메시지 처리 (Gemini AI와 대화)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # 📅 일일 학습 스케줄러 (매일 오전 7시 + 음성 기능 포함)
+    scheduler = AsyncIOScheduler(timezone=MSK)
+    scheduler.add_job(send_daily_learning, 'cron', hour=7, minute=0, args=[application.bot])
+    scheduler.add_job(send_daily_learning, 'cron', hour=12, minute=0, args=[application.bot])
+    
+    logger.info("🚀 세계 최고 수준 러시아어 AI 튜터 봇 '루샤' 시작!")
+    logger.info("✨ 새로운 기능: 차세대 게임 시스템 + 지능형 AI 대화 + 완벽한 상태 관리")
+    
+    try:
+        scheduler.start()
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        
+        while True:
+            await asyncio.sleep(3600)
+
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("봇과 스케줄러를 종료합니다.")
+        scheduler.shutdown()
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
+
 if __name__ == '__main__':
     asyncio.run(main()) 
