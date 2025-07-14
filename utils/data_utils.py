@@ -1,100 +1,89 @@
 import json
-import os
-import asyncio
+import random
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
-from functools import lru_cache
+from typing import Dict, Any, List, Optional
 from cachetools import TTLCache
+import asyncio
+import logging
+from config.settings import USER_DATA_FILE, MSK, CACHE_TTL, MAX_CACHE_SIZE
 
-from config.settings import USER_DATA_FILE, MSK, CACHE_TTL, MAX_CACHE_SIZE, PLANS
+logger = logging.getLogger(__name__)
 
-# 캐시 인스턴스
-cache = TTLCache(maxsize=MAX_CACHE_SIZE, ttl=CACHE_TTL)
+# 메모리 캐시
+user_cache = TTLCache(maxsize=MAX_CACHE_SIZE, ttl=CACHE_TTL)
 
 class UserManager:
-    """사용자 데이터 관리 클래스"""
-    
     @staticmethod
-    def load_user_data() -> Dict[str, Any]:
-        """사용자 데이터 로드 (캐시된)"""
-        if 'user_data' in cache:
-            return cache['user_data']
-            
-        if os.path.exists(USER_DATA_FILE):
-            try:
-                with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    cache['user_data'] = data
-                    return data
-            except Exception:
-                pass
-        
-        data = {}
-        cache['user_data'] = data
-        return data
+    def load_user_data() -> Dict:
+        """사용자 데이터 로드"""
+        try:
+            with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+        except Exception as e:
+            logger.error(f"사용자 데이터 로드 오류: {e}")
+            return {}
 
     @staticmethod
-    def save_user_data(data: Dict[str, Any]) -> None:
+    def save_user_data(data: Dict) -> None:
         """사용자 데이터 저장"""
-        with open(USER_DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        cache['user_data'] = data
+        try:
+            with open(USER_DATA_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            # 캐시도 업데이트
+            for user_id, user_data in data.items():
+                user_cache[user_id] = user_data
+        except Exception as e:
+            logger.error(f"사용자 데이터 저장 오류: {e}")
 
     @staticmethod
-    def get_user(chat_id: int) -> Dict[str, Any]:
-        """사용자 정보 가져오기 (없으면 생성)"""
-        users = UserManager.load_user_data()
+    def get_user(chat_id: int) -> Dict:
+        """사용자 정보 가져오기 (캐시 활용)"""
         user_id = str(chat_id)
         
+        # 캐시에서 먼저 확인
+        if user_id in user_cache:
+            user_data = user_cache[user_id]
+            user_data['stats']['last_active_date'] = datetime.now(MSK).isoformat()
+            return user_data
+        
+        users = UserManager.load_user_data()
+        
         if user_id not in users:
-            now = datetime.now(MSK).isoformat()
             users[user_id] = {
-                'plan': 'Free',
                 'subscribed_daily': False,
                 'quest_state': {'current_quest': None, 'stage': 0},
                 'stats': {
-                    'start_date': now,
-                    'last_active_date': now,
+                    'start_date': datetime.now(MSK).isoformat(),
+                    'last_active_date': datetime.now(MSK).isoformat(),
                     'quests_completed': 0,
                     'sentences_corrected': 0,
+                    'translations_made': 0,
+                    'tts_generated': 0,
                     'daily_words_received': 0,
+                    'quiz_attempts': 0,
+                    'quiz_score': 0,
                     'total_exp': 0,
                     'level': 1,
-                    'quiz_scores': [],
                     'streak_days': 0,
-                    'badges': [],
-                    'favorite_language': 'russian'
+                    'last_quiz_date': None,
+                    'achievements': []
                 },
-                'usage': {
-                    'today': datetime.now(MSK).date().isoformat(),
-                    'corrections': 0,
-                    'translations': 0,
-                    'tts_calls': 0,
-                    'quiz_attempts': 0
-                },
+                'quiz_history': [],
                 'preferences': {
-                    'notification_time': '07:00',
-                    'difficulty': 'medium',
-                    'language_learning_goals': ['conversation', 'grammar']
+                    'language': 'korean',
+                    'difficulty': 'easy',
+                    'notifications': True
                 }
             }
             UserManager.save_user_data(users)
         
         # 마지막 활동 시간 업데이트
         users[user_id]['stats']['last_active_date'] = datetime.now(MSK).isoformat()
-        
-        # 일일 사용량 리셋 체크
-        today = datetime.now(MSK).date().isoformat()
-        if users[user_id]['usage']['today'] != today:
-            users[user_id]['usage'] = {
-                'today': today,
-                'corrections': 0,
-                'translations': 0,
-                'tts_calls': 0,
-                'quiz_attempts': 0
-            }
-        
+        user_cache[user_id] = users[user_id]
         UserManager.save_user_data(users)
+        
         return users[user_id]
 
     @staticmethod
@@ -106,177 +95,258 @@ class UserManager:
         if user_id in users:
             if stat_type in users[user_id]['stats']:
                 users[user_id]['stats'][stat_type] += increment
-            
-            # 경험치 및 레벨 계산
-            if stat_type == 'quests_completed':
-                users[user_id]['stats']['total_exp'] += 50
-            elif stat_type == 'sentences_corrected':
-                users[user_id]['stats']['total_exp'] += 10
-            
-            # 레벨업 체크
-            exp = users[user_id]['stats']['total_exp']
-            new_level = min(100, max(1, exp // 100 + 1))
-            users[user_id]['stats']['level'] = new_level
-            
-            UserManager.save_user_data(users)
+                
+                # 경험치 추가 시 레벨 계산
+                if stat_type == 'total_exp':
+                    exp = users[user_id]['stats']['total_exp']
+                    level = min(exp // 100 + 1, 100)  # 100레벨 최대
+                    users[user_id]['stats']['level'] = level
+                
+                UserManager.save_user_data(users)
 
     @staticmethod
-    def check_usage_limit(chat_id: int, usage_type: str) -> tuple[bool, int, int]:
-        """사용량 제한 확인"""
-        user = UserManager.get_user(chat_id)
-        plan = user['plan']
-        plan_limits = PLANS.get(plan, PLANS['Free'])
-        
-        current_usage = user['usage'].get(usage_type, 0)
-        limit = plan_limits.get(f'daily_{usage_type}', 0)
-        
-        if limit == -1:  # 무제한
-            return True, current_usage, -1
-        
-        can_use = current_usage < limit
-        return can_use, current_usage, limit
-
-    @staticmethod
-    def increment_usage(chat_id: int, usage_type: str) -> None:
-        """사용량 증가"""
+    def add_exp(chat_id: int, exp_amount: int) -> Dict:
+        """경험치 추가 및 레벨업 확인"""
         users = UserManager.load_user_data()
         user_id = str(chat_id)
         
-        if user_id in users:
-            if usage_type not in users[user_id]['usage']:
-                users[user_id]['usage'][usage_type] = 0
-            users[user_id]['usage'][usage_type] += 1
+        if user_id not in users:
+            UserManager.get_user(chat_id)
+            users = UserManager.load_user_data()
+        
+        old_level = users[user_id]['stats']['level']
+        users[user_id]['stats']['total_exp'] += exp_amount
+        
+        new_exp = users[user_id]['stats']['total_exp']
+        new_level = min(new_exp // 100 + 1, 100)
+        users[user_id]['stats']['level'] = new_level
+        
+        UserManager.save_user_data(users)
+        
+        return {
+            'leveled_up': new_level > old_level,
+            'old_level': old_level,
+            'new_level': new_level,
+            'total_exp': new_exp
+        }
+
+    @staticmethod
+    def calculate_streak(chat_id: int) -> int:
+        """연속 학습 일수 계산"""
+        users = UserManager.load_user_data()
+        user_id = str(chat_id)
+        
+        if user_id not in users:
+            return 0
+        
+        last_active = users[user_id]['stats'].get('last_active_date')
+        if not last_active:
+            return 0
+        
+        last_date = datetime.fromisoformat(last_active).date()
+        today = datetime.now(MSK).date()
+        
+        if last_date == today:
+            return users[user_id]['stats'].get('streak_days', 0)
+        elif last_date == today - timedelta(days=1):
+            # 어제 활동했으면 연속
+            users[user_id]['stats']['streak_days'] = users[user_id]['stats'].get('streak_days', 0) + 1
             UserManager.save_user_data(users)
+            return users[user_id]['stats']['streak_days']
+        else:
+            # 연속 끊김
+            users[user_id]['stats']['streak_days'] = 1
+            UserManager.save_user_data(users)
+            return 1
 
 class ProgressTracker:
-    """학습 진도 추적 클래스"""
-    
     @staticmethod
     def calculate_progress_bar(current: int, total: int, length: int = 10) -> str:
-        """진행 상태 바 생성"""
+        """진행률 바 생성"""
         if total == 0:
-            return '□' * length
+            return "░" * length
         
         filled = int((current / total) * length)
-        return '■' * filled + '□' * (length - filled)
-    
+        bar = "▓" * filled + "░" * (length - filled)
+        return f"{bar} {current}/{total}"
+
     @staticmethod
-    def get_streak_info(chat_id: int) -> Dict[str, Any]:
-        """연속 학습일 정보"""
+    def get_user_progress(chat_id: int) -> Dict:
+        """사용자 진행 상황 조회"""
         user = UserManager.get_user(chat_id)
-        last_active = datetime.fromisoformat(user['stats']['last_active_date'])
-        today = datetime.now(MSK)
+        stats = user['stats']
         
-        # 연속일 계산 로직
-        days_diff = (today.date() - last_active.date()).days
-        if days_diff <= 1:
-            streak = user['stats'].get('streak_days', 0)
-            if days_diff == 1:
-                streak += 1
-        else:
-            streak = 0
+        # 레벨 진행률
+        exp = stats.get('total_exp', 0)
+        level = stats.get('level', 1)
+        exp_for_current_level = (level - 1) * 100
+        exp_for_next_level = level * 100
+        exp_progress = exp - exp_for_current_level
         
         return {
-            'current_streak': streak,
-            'longest_streak': max(streak, user['stats'].get('longest_streak', 0)),
-            'badge': get_streak_badge(streak)
+            'level': level,
+            'exp': exp,
+            'exp_progress': exp_progress,
+            'exp_needed': 100 - exp_progress if level < 100 else 0,
+            'streak': ProgressTracker.calculate_streak_badge(UserManager.calculate_streak(chat_id)),
+            'total_activities': (
+                stats.get('sentences_corrected', 0) + 
+                stats.get('translations_made', 0) + 
+                stats.get('quests_completed', 0) + 
+                stats.get('quiz_attempts', 0)
+            ),
+            'achievements': stats.get('achievements', [])
         }
 
-def get_streak_badge(days: int) -> str:
-    """연속일에 따른 배지 반환"""
-    if days >= 100:
-        return "🔥💎 화염의 다이아몬드"
-    elif days >= 50:
-        return "🔥👑 화염의 왕관"
-    elif days >= 30:
-        return "🔥🏆 화염의 트로피"
-    elif days >= 14:
-        return "🔥⭐ 화염의 별"
-    elif days >= 7:
-        return "🔥 일주일 화염"
-    elif days >= 3:
-        return "✨ 시작의 불꽃"
-    else:
-        return "💫 첫 걸음"
-
-@lru_cache(maxsize=100)
-def load_vocabulary_data() -> List[Dict[str, Any]]:
-    """어휘 데이터 로드 (캐시된)"""
-    try:
-        with open('russian_korean_vocab_2000.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('vocabulary', [])
-    except FileNotFoundError:
-        return []
-
-@lru_cache(maxsize=50)
-def load_conversation_data() -> List[Dict[str, Any]]:
-    """회화 데이터 로드 (캐시된)"""
-    try:
-        with open('russian_learning_database.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('conversations', [])
-    except FileNotFoundError:
-        return []
+    @staticmethod
+    def calculate_streak_badge(streak_days: int) -> str:
+        """연속 일수에 따른 뱃지 반환"""
+        if streak_days >= 30:
+            return f"🔥 {streak_days}일 연속 (전설의 학습자!)"
+        elif streak_days >= 14:
+            return f"🔥 {streak_days}일 연속 (꾸준한 학습자)"
+        elif streak_days >= 7:
+            return f"⭐ {streak_days}일 연속 (일주일 달성!)"
+        elif streak_days >= 3:
+            return f"✨ {streak_days}일 연속 (좋은 습관!)"
+        else:
+            return f"🌱 {streak_days}일"
 
 class QuizManager:
-    """퀴즈 관리 클래스"""
-    
     @staticmethod
-    def generate_vocabulary_quiz() -> Dict[str, Any]:
-        """단어 퀴즈 생성"""
-        vocabulary = load_vocabulary_data()
-        if not vocabulary:
-            return None
-        
-        import random
-        word = random.choice(vocabulary)
-        
-        # 오답 선택지 생성
-        wrong_answers = random.sample([v['korean'] for v in vocabulary if v != word], 3)
-        
-        options = [word['korean']] + wrong_answers
-        random.shuffle(options)
-        
-        return {
-            'question': f"'{word['russian']}'의 뜻은?",
-            'options': options,
-            'correct_answer': word['korean'],
-            'pronunciation': word.get('pronunciation', ''),
-            'category': 'vocabulary'
-        }
-    
-    @staticmethod
-    def check_answer(user_answer: str, correct_answer: str) -> bool:
-        """정답 확인"""
-        return user_answer.strip().lower() == correct_answer.strip().lower()
+    def get_vocabulary_sample(count: int = 10) -> List[Dict]:
+        """어휘 퀴즈용 단어 샘플 가져오기"""
+        try:
+            with open('russian_korean_vocab_2000.json', 'r', encoding='utf-8') as f:
+                vocab_db = json.load(f)
+            
+            if 'vocabulary' in vocab_db:
+                return random.sample(vocab_db['vocabulary'], min(count, len(vocab_db['vocabulary'])))
+            return []
+        except Exception as e:
+            logger.error(f"어휘 데이터 로드 오류: {e}")
+            return []
 
-def format_user_stats(user_data: Dict[str, Any]) -> str:
-    """사용자 통계를 보기 좋게 포맷팅"""
-    stats = user_data['stats']
-    level = stats.get('level', 1)
-    exp = stats.get('total_exp', 0)
-    next_level_exp = level * 100
-    exp_progress = exp % 100
-    
-    progress_bar = ProgressTracker.calculate_progress_bar(exp_progress, 100)
-    
-    return f"""
-📊 **개인 통계**
+    @staticmethod
+    def generate_quiz_question(category: str) -> Dict:
+        """퀴즈 문제 생성"""
+        if category == 'vocabulary':
+            words = QuizManager.get_vocabulary_sample(4)  # 정답 1개 + 오답 3개
+            if len(words) < 4:
+                return None
+            
+            correct_word = words[0]
+            wrong_words = words[1:4]
+            
+            # 선택지 섞기
+            choices = [correct_word['korean']] + [w['korean'] for w in wrong_words]
+            random.shuffle(choices)
+            
+            return {
+                'question': f"다음 러시아어 단어의 뜻은?\n\n**{correct_word['russian']}**\n[{correct_word.get('pronunciation', '')}]",
+                'choices': choices,
+                'correct_answer': correct_word['korean'],
+                'explanation': f"**{correct_word['russian']}** [{correct_word.get('pronunciation', '')}] = {correct_word['korean']}"
+            }
+        
+        # 다른 카테고리들도 추가 가능
+        return None
+
+    @staticmethod
+    def record_quiz_result(chat_id: int, category: str, score: int, total_questions: int) -> None:
+        """퀴즈 결과 기록"""
+        users = UserManager.load_user_data()
+        user_id = str(chat_id)
+        
+        if user_id not in users:
+            UserManager.get_user(chat_id)
+            users = UserManager.load_user_data()
+        
+        # 퀴즈 기록 추가
+        quiz_record = {
+            'date': datetime.now(MSK).isoformat(),
+            'category': category,
+            'score': score,
+            'total': total_questions,
+            'percentage': round((score / total_questions) * 100, 1)
+        }
+        
+        if 'quiz_history' not in users[user_id]:
+            users[user_id]['quiz_history'] = []
+        
+        users[user_id]['quiz_history'].append(quiz_record)
+        
+        # 통계 업데이트
+        users[user_id]['stats']['quiz_attempts'] += 1
+        users[user_id]['stats']['quiz_score'] += score
+        users[user_id]['stats']['last_quiz_date'] = datetime.now(MSK).isoformat()
+        
+        # 경험치 추가
+        exp_gained = score * 2  # 맞은 문제당 2 EXP
+        users[user_id]['stats']['total_exp'] += exp_gained
+        
+        UserManager.save_user_data(users)
+
+    @staticmethod
+    def get_leaderboard(category: str = 'overall', limit: int = 10) -> List[Dict]:
+        """리더보드 조회"""
+        users = UserManager.load_user_data()
+        leaderboard = []
+        
+        for user_id, user_data in users.items():
+            stats = user_data.get('stats', {})
+            
+            if category == 'overall':
+                score = stats.get('total_exp', 0)
+            elif category == 'quiz':
+                score = stats.get('quiz_score', 0)
+            elif category == 'streak':
+                score = UserManager.calculate_streak(int(user_id))
+            else:
+                continue
+            
+            leaderboard.append({
+                'user_id': user_id,
+                'score': score,
+                'level': stats.get('level', 1),
+                'activities': (
+                    stats.get('sentences_corrected', 0) + 
+                    stats.get('translations_made', 0) + 
+                    stats.get('quests_completed', 0)
+                )
+            })
+        
+        # 점수순 정렬
+        leaderboard.sort(key=lambda x: x['score'], reverse=True)
+        return leaderboard[:limit]
+
+    @staticmethod
+    def format_user_stats(chat_id: int) -> str:
+        """사용자 통계 포맷팅"""
+        user = UserManager.get_user(chat_id)
+        stats = user['stats']
+        
+        # 경험치와 레벨 계산
+        exp = stats.get('total_exp', 0)
+        level = stats.get('level', 1)
+        exp_progress = exp % 100
+        
+        progress_bar = ProgressTracker.calculate_progress_bar(exp_progress, 100)
+        
+        return f"""
+📊 **학습 통계**
+
 🔰 **레벨**: {level} ({exp_progress}/100 EXP)
 {progress_bar}
 
-📈 **학습 기록**
-✅ 완료한 퀘스트: {stats.get('quests_completed', 0)}개
-✍️ 교정받은 문장: {stats.get('sentences_corrected', 0)}개
-📚 받은 학습자료: {stats.get('daily_words_received', 0)}회
+📈 **활동 기록**:
+• ✍️ 작문 교정: {stats.get('sentences_corrected', 0)}회
+• 🌍 번역: {stats.get('translations_made', 0)}회  
+• 🎵 음성 변환: {stats.get('tts_generated', 0)}회
+• 🏆 완료한 퀘스트: {stats.get('quests_completed', 0)}개
+• 🧠 퀴즈 시도: {stats.get('quiz_attempts', 0)}회
 
-🏆 **성취**
-🔥 연속 학습일: {stats.get('streak_days', 0)}일
-⭐ 총 경험치: {exp} EXP
-🎯 평균 퀴즈 점수: {calculate_average_quiz_score(stats.get('quiz_scores', []))}점
-"""
+🔥 **연속 학습**: {ProgressTracker.calculate_streak_badge(UserManager.calculate_streak(chat_id))}
 
-def calculate_average_quiz_score(scores: List[int]) -> float:
-    """평균 퀴즈 점수 계산"""
-    return sum(scores) / len(scores) if scores else 0.0 
+⭐ **총 경험치**: {exp} EXP
+        """.strip() 
