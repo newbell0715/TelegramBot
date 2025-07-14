@@ -1,22 +1,4 @@
 {
-    "123456789": {
-        "subscribed_daily": false,
-        "quest_state": {
-            "current_quest": null,
-            "stage": 0
-        },
-        "stats": {
-            "start_date": "2024-12-19T10:30:00+03:00",
-            "last_active_date": "2024-12-19T10:30:00+03:00",
-            "quests_completed": 0,
-            "sentences_corrected": 0,
-            "translations_made": 0,
-            "tts_generated": 0,
-            "daily_words_received": 0,
-            "total_exp": 0,
-            "level": 1
-        }
-    },
     "2055662709": {
         "subscribed_daily": true,
         "quest_state": {
@@ -25,7 +7,7 @@
         },
         "stats": {
             "start_date": "2025-07-14T14:32:04.904398+03:00",
-            "last_active_date": "2025-07-14T14:32:04.904928+03:00",
+            "last_active_date": "2025-07-14T19:08:41.895845+03:00",
             "quests_completed": 0,
             "sentences_corrected": 0,
             "translations_made": 0,
@@ -33,6 +15,46 @@
             "daily_words_received": 0,
             "total_exp": 0,
             "level": 1
+        },
+        "learning": {
+            "vocabulary_srs": {},
+            "pronunciation_scores": [],
+            "game_stats": {
+                "word_match": {
+                    "played": 1,
+                    "won": 0,
+                    "best_score": 0
+                },
+                "sentence_builder": {
+                    "played": 0,
+                    "won": 0,
+                    "best_score": 0
+                },
+                "speed_quiz": {
+                    "played": 0,
+                    "won": 0,
+                    "best_score": 0
+                },
+                "pronunciation_challenge": {
+                    "played": 0,
+                    "won": 0,
+                    "best_score": 0
+                }
+            },
+            "achievements": [],
+            "daily_streak": 1,
+            "last_study_date": "2025-07-14",
+            "weak_areas": [],
+            "strength_areas": [],
+            "personalized_content": [],
+            "learning_style": "balanced",
+            "difficulty_preference": "adaptive"
+        },
+        "social": {
+            "friends": [],
+            "challenges_sent": 0,
+            "challenges_won": 0,
+            "ranking_points": 0
         }
     }
 }

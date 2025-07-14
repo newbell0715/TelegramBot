@@ -39,12 +39,12 @@ async def send_daily_learning(bot: Bot):
     # 메시지 형식 생성
     words_text = "**📚 오늘의 단어 (30개):**\n"
     for i, word in enumerate(selected_words, 1):
-        words_text += f"{i}. **{word['russian']}** [{word['pronunciation']}] - {word['korean']}\n"
+        words_text += f"{i}. **{word['russian']}** 🔊`{word['pronunciation']}` - {word['korean']}\n"
     
     conversations_text = "\n**💬 오늘의 회화 (20개):**\n"
     for i, conv in enumerate(selected_conversations, 1):
         conversations_text += f"{i}. **{conv['russian']}** - {conv['korean']}\n"
-        conversations_text += f"   [{conv['pronunciation']}]\n"
+        conversations_text += f"   🔊 발음: `{conv['pronunciation']}`\n"
     
     learning_content = words_text + conversations_text
     
