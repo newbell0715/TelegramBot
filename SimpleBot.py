@@ -947,6 +947,21 @@ async def send_daily_learning(bot: Bot):
     
     save_user_data(users)
 
+# 먼저, 일반 메시지 처리 핸들러 함수 추가
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """명령어가 아닌 일반 메시지를 처리하여 Gemini AI에 질문을 전달합니다."""
+    user_message = update.message.text
+    chat_id = update.effective_chat.id
+    user = get_user(chat_id)
+    
+    # AI 호출
+    processing_message = await update.message.reply_text("🤔 생각 중... 😊")
+    response = await call_gemini(user_message)
+    
+    # 응답 전송
+    await processing_message.delete()
+    await update.message.reply_text(response)
+
 # --- 봇 실행 ---
 async def main() -> None:
     if not BOT_TOKEN or not GEMINI_API_KEY:
@@ -968,6 +983,7 @@ async def main() -> None:
     application.add_handler(CommandHandler("ls", listening_command))
     application.add_handler(CommandHandler("trls", translate_listen_command))
     application.add_handler(CommandHandler("model_status", model_status_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     scheduler = AsyncIOScheduler(timezone=MSK)
     scheduler.add_job(send_daily_learning, 'cron', hour=7, minute=0, args=[application.bot])
